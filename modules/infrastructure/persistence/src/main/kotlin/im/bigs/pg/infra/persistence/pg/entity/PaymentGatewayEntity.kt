@@ -13,9 +13,9 @@ class PaymentGatewayEntity(
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null,
     @Column(nullable = false, unique = true, length = 32)
-    var code: String,
+    var code: String = "",
     @Column(nullable = false)
-    var name: String,
+    var name: String = "",
     @Column(nullable = false)
     var priority: Int = 0,
     @Column(nullable = false)

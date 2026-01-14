@@ -5,6 +5,7 @@ package im.bigs.pg.domain.pg
  */
 enum class PgCode {
     MOCK,
+    TEST_PG,
     TOSSPAY,
     NHN_KCP,
     KG_INICIS,
