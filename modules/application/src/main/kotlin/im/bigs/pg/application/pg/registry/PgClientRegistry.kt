@@ -1,4 +1,4 @@
-package im.bigs.pg.application.pg.service
+package im.bigs.pg.application.pg.registry
 
 import im.bigs.pg.application.pg.port.out.PgClient
 import im.bigs.pg.domain.pg.PgCode
@@ -20,14 +20,7 @@ class PgClientRegistry(
         return clientMap[pgCode]
     }
 
-    private fun extractPgCode(client: PgClient): PgCode {        // 클라이언트 구현체의 클래스명이나 어노테이션으로 PG 코드 추출
-        return when (client::class.simpleName) {
-            "MockPgClient" -> PgCode.MOCK
-            "TossPayClient" -> PgCode.TOSSPAY
-            "NhnKcpClient" -> PgCode.NHN_KCP
-            "KgInicisClient" -> PgCode.KG_INICIS
-            else -> throw IllegalArgumentException("Unknown PG client: ${client::class.simpleName}")
-        }
+    private fun extractPgCode(client: PgClient): PgCode {
+        return client.getPgCode()
     }
 }
-

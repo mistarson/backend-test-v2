@@ -1,4 +1,4 @@
-package im.bigs.pg.application.pg
+package im.bigs.pg.application.pg.resolver
 
 import im.bigs.pg.domain.pg.PgCode
 
@@ -18,4 +18,3 @@ interface PgClientResolver {
      */
     fun resolve(partnerId: Long): List<PgCode>
 }
-

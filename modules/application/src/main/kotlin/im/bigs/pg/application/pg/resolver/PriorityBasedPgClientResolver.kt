@@ -1,4 +1,4 @@
-package im.bigs.pg.application.pg
+package im.bigs.pg.application.pg.resolver
 
 import im.bigs.pg.application.pg.port.out.PartnerPgSupportOutPort
 import im.bigs.pg.domain.pg.PgCode
@@ -16,4 +16,3 @@ class PriorityBasedPgClientResolver(
         return partnerPgSupportOutPort.findPgCodesByPriority(partnerId)
     }
 }
-

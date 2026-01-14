@@ -1,10 +1,14 @@
 package im.bigs.pg.application.pg.service
 
-import im.bigs.pg.application.pg.PgClientResolver
 import im.bigs.pg.application.pg.exception.PgApprovalException
 import im.bigs.pg.application.pg.exception.PgClientNotFoundException
+import im.bigs.pg.application.pg.factory.PgApproveRequestFactory
+import im.bigs.pg.application.pg.port.out.BasePgApproveRequest
 import im.bigs.pg.application.pg.port.out.PgApproveRequest
 import im.bigs.pg.application.pg.port.out.PgApproveResult
+import im.bigs.pg.application.pg.port.out.PgClient
+import im.bigs.pg.application.pg.registry.PgClientRegistry
+import im.bigs.pg.application.pg.resolver.PgClientResolver
 import im.bigs.pg.domain.pg.PgCode
 import org.springframework.stereotype.Service
 
@@ -20,7 +24,7 @@ class PgApprovalService(
 ) {
     fun approve(request: PgApproveRequest): PgApproveResult {
         val pgCodes = pgClientResolver.resolve(request.partnerId)
-            .ifEmpty { throw PgClientNotFoundException(request.partnerId, "No supported PG found for partner") }
+            .ifEmpty { throw PgClientNotFoundException("No supported PG found for partner") }
 
         val failures = mutableListOf<Throwable>()
         val approvalResult = pgCodes.firstNotNullOfOrNull { pgCode ->
@@ -38,9 +42,14 @@ class PgApprovalService(
             request: PgApproveRequest,
             failures: MutableList<Throwable>
     ): PgApproveResult? {
-        val client = pgClientRegistry.getClient(pgCode) ?: return null
+        return runCatching {
+            val client = pgClientRegistry.getClient(pgCode) ?: return null
 
-        return runCatching { client.approve(request) }
+            // pgCode에 따라 적절한 BasePgApproveRequest 구현체 생성
+            val pgRequest = PgApproveRequestFactory.create(pgCode, request)
+
+            client.approve(pgRequest)
+        }
             .onFailure { failures.add(it) }
             .getOrNull()
     }
