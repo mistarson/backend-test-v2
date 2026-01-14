@@ -36,3 +36,24 @@ create table if not exists payment (
   index idx_payment_partner_created (partner_id, created_at desc)
 );
 
+-- payment gateway master
+create table if not exists payment_gateway (
+  id bigint auto_increment primary key,
+  code varchar(32) not null unique,
+  name varchar(255) not null,
+  priority int not null default 0,
+  active boolean not null default true,
+  index idx_active_priority (active, priority)
+);
+
+-- partner pg support
+create table if not exists partner_pg_support (
+  id bigint auto_increment primary key,
+  partner_id bigint not null,
+  payment_gateway_id bigint not null,
+  unique key uk_partner_pg (partner_id, payment_gateway_id),
+  index idx_partner_id (partner_id),
+  foreign key (partner_id) references partner(id),
+  foreign key (payment_gateway_id) references payment_gateway(id)
+);
+
