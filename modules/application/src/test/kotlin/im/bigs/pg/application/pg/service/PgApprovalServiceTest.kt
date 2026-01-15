@@ -1,10 +1,9 @@
 package im.bigs.pg.application.pg.service
 
+import im.bigs.pg.application.payment.factory.ApplicationTestDataFactory
 import im.bigs.pg.application.pg.exception.PgApprovalException
 import im.bigs.pg.application.pg.exception.PgClientNotFoundException
 import im.bigs.pg.application.pg.port.out.BasePgApproveRequest
-import im.bigs.pg.application.pg.port.out.PgApproveRequest
-import im.bigs.pg.application.pg.port.out.PgApproveResult
 import im.bigs.pg.application.pg.port.out.PgClient
 import im.bigs.pg.application.pg.registry.PgClientRegistry
 import im.bigs.pg.application.pg.resolver.PgClientResolver
@@ -15,13 +14,11 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.DisplayName
-import java.math.BigDecimal
 import java.time.LocalDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 
 class PgApprovalServiceTest {
     private val pgClientResolver = mockk<PgClientResolver>()
@@ -33,9 +30,9 @@ class PgApprovalServiceTest {
     fun `단일 PG 승인 성공`() {
         // given
         val partnerId = 1L
-        val request = TestDataFactory.defaultPgApproveRequest(partnerId = partnerId)
+        val request = ApplicationTestDataFactory.defaultPgApproveRequest(partnerId = partnerId)
         val pgCode = PgCode.TEST_PG
-        val expectedResult = TestDataFactory.defaultPgApproveResult(
+        val expectedResult = ApplicationTestDataFactory.defaultPgApproveResult(
             approvalCode = "APPROVAL-123",
             approvedAt = LocalDateTime.of(2024, 1, 15, 10, 30, 0)
         )
@@ -68,9 +65,9 @@ class PgApprovalServiceTest {
     fun `폴백 메커니즘 동작 확인`() {
         // given
         val partnerId = 2L
-        val request = TestDataFactory.defaultPgApproveRequest(partnerId = partnerId)
+        val request = ApplicationTestDataFactory.defaultPgApproveRequest(partnerId = partnerId)
         val pgCodes = listOf(PgCode.TEST_PG, PgCode.MOCK)
-        val expectedResult = TestDataFactory.defaultPgApproveResult(
+        val expectedResult = ApplicationTestDataFactory.defaultPgApproveResult(
             approvalCode = "APPROVAL-789",
             approvedAt = LocalDateTime.of(2024, 2, 1, 12, 0, 0)
         )
@@ -104,7 +101,7 @@ class PgApprovalServiceTest {
     fun `모든 PG 실패 시 예외 발생`() {
         // given
         val partnerId = 3L
-        val request = TestDataFactory.defaultPgApproveRequest(partnerId = partnerId)
+        val request = ApplicationTestDataFactory.defaultPgApproveRequest(partnerId = partnerId)
         val pgCodes = listOf(PgCode.TEST_PG, PgCode.MOCK)
         val failures = listOf(
             RuntimeException("First PG failed"),
@@ -143,7 +140,7 @@ class PgApprovalServiceTest {
     fun `PG 코드 목록이 비어있을 때 예외 발생`() {
         // given
         val partnerId = 4L
-        val request = TestDataFactory.defaultPgApproveRequest(partnerId = partnerId)
+        val request = ApplicationTestDataFactory.defaultPgApproveRequest(partnerId = partnerId)
 
         every { pgClientResolver.resolve(partnerId) } returns emptyList()
 
@@ -162,7 +159,7 @@ class PgApprovalServiceTest {
     fun `레지스트리에 PG 클라이언트가 없을 때 예외 발생`() {
         // given
         val partnerId = 5L
-        val request = TestDataFactory.defaultPgApproveRequest(partnerId = partnerId)
+        val request = ApplicationTestDataFactory.defaultPgApproveRequest(partnerId = partnerId)
         val pgCodes = listOf(PgCode.TEST_PG, PgCode.MOCK)
 
         every { pgClientResolver.resolve(partnerId) } returns pgCodes
@@ -191,9 +188,9 @@ class PgApprovalServiceTest {
     fun `PgApproveRequestFactory 예외 발생 시 폴백`() {
         // given
         val partnerId = 6L
-        val request = TestDataFactory.defaultPgApproveRequest(partnerId = partnerId)
+        val request = ApplicationTestDataFactory.defaultPgApproveRequest(partnerId = partnerId)
         val pgCodes = listOf(PgCode.TOSSPAY, PgCode.MOCK)
-        val expectedResult = TestDataFactory.defaultPgApproveResult(
+        val expectedResult = ApplicationTestDataFactory.defaultPgApproveResult(
             approvalCode = "APPROVAL-SUCCESS"
         )
 
@@ -219,9 +216,9 @@ class PgApprovalServiceTest {
     fun `APPROVED 상태 반환`() {
         // given
         val partnerId = 8L
-        val request = TestDataFactory.defaultPgApproveRequest(partnerId = partnerId)
+        val request = ApplicationTestDataFactory.defaultPgApproveRequest(partnerId = partnerId)
         val pgCode = PgCode.TEST_PG
-        val expectedResult = TestDataFactory.defaultPgApproveResult(status = PaymentStatus.APPROVED)
+        val expectedResult = ApplicationTestDataFactory.defaultPgApproveResult(status = PaymentStatus.APPROVED)
         val pgClient = mockk<PgClient>()
 
         every { pgClientResolver.resolve(partnerId) } returns listOf(pgCode)
@@ -240,9 +237,9 @@ class PgApprovalServiceTest {
     fun `CANCELED 상태 반환`() {
         // given
         val partnerId = 9L
-        val request = TestDataFactory.defaultPgApproveRequest(partnerId = partnerId)
+        val request = ApplicationTestDataFactory.defaultPgApproveRequest(partnerId = partnerId)
         val pgCode = PgCode.MOCK
-        val expectedResult = TestDataFactory.defaultPgApproveResult(
+        val expectedResult = ApplicationTestDataFactory.defaultPgApproveResult(
             approvalCode = "APPROVAL-CANCELED",
             status = PaymentStatus.CANCELED
         )
@@ -265,14 +262,14 @@ class PgApprovalServiceTest {
     fun `레지스트리에 없는 PG는 approve 호출 안 됨`() {
         // given
         val partnerId = 13L
-        val request = TestDataFactory.defaultPgApproveRequest(partnerId = partnerId)
+        val request = ApplicationTestDataFactory.defaultPgApproveRequest(partnerId = partnerId)
         val pgCodes = listOf(PgCode.TEST_PG, PgCode.MOCK)
         val secondPgClient = mockk<PgClient>()
 
         every { pgClientResolver.resolve(partnerId) } returns pgCodes
         every { pgClientRegistry.getClient(pgCodes[0]) } returns null
         every { pgClientRegistry.getClient(pgCodes[1]) } returns secondPgClient
-        every { secondPgClient.approve(any()) } returns TestDataFactory.defaultPgApproveResult()
+        every { secondPgClient.approve(any()) } returns ApplicationTestDataFactory.defaultPgApproveResult()
 
         // when
         service.approve(request)
@@ -286,7 +283,7 @@ class PgApprovalServiceTest {
     fun `실패 예외 수집 검증`() {
         // given
         val partnerId = 14L
-        val request = TestDataFactory.defaultPgApproveRequest(partnerId = partnerId)
+        val request = ApplicationTestDataFactory.defaultPgApproveRequest(partnerId = partnerId)
         val pgCodes = listOf(PgCode.TEST_PG, PgCode.MOCK, PgCode.MOCK)
         val failures = listOf(
             RuntimeException("First PG failed"),
@@ -322,7 +319,7 @@ class PgApprovalServiceTest {
     fun `예외 메시지 상세성 검증`() {
         // given
         val partnerId = 15L
-        val request = TestDataFactory.defaultPgApproveRequest(partnerId = partnerId)
+        val request = ApplicationTestDataFactory.defaultPgApproveRequest(partnerId = partnerId)
         val pgCodes = listOf(PgCode.TEST_PG, PgCode.MOCK, PgCode.TOSSPAY, PgCode.NHN_KCP)
 
         pgCodes.forEach { pgCode ->
