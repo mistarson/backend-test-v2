@@ -245,10 +245,13 @@ class PaymentQueryE2ETest : BaseIntegrationTest() {
         // When: 파트너1로 필터링하여 첫 페이지 조회 (limit=2)
         val response = getQueryResponse("/api/v1/payments?partnerId=${partner1.id}&limit=2")
 
-        // Then: items는 2개 (페이지네이션)이지만 summary는 필터 조건(파트너1)으로 전체 집계
+        // Then: summary는 items와 동일한 집합을 집계해야 함
         assertEquals(2, response.items.size)
-        assertEquals(3, response.summary.count) // 파트너1의 전체 결제 개수
-        assertEquals(BigDecimal("45000"), response.summary.totalAmount) // 파트너1의 전체 금액
+        assertEquals(2, response.summary.count) // items와 동일한 개수
+        val expectedTotalAmount = response.items.sumOf { it.amount }
+        val expectedTotalNetAmount = response.items.sumOf { it.netAmount }
+        assertEquals(expectedTotalAmount, response.summary.totalAmount)
+        assertEquals(expectedTotalNetAmount, response.summary.totalNetAmount)
     }
 
     @Test
