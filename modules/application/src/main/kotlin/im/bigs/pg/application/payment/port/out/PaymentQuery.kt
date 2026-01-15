@@ -1,8 +1,7 @@
 package im.bigs.pg.application.payment.port.out
 
-import com.fasterxml.jackson.annotation.JsonFormat
 import im.bigs.pg.domain.payment.PaymentStatus
-import java.time.LocalDateTime
+import java.time.Instant
 
 /**
  * 결제 페이지 조회용 입력 값.
@@ -11,12 +10,9 @@ import java.time.LocalDateTime
 data class PaymentQuery(
     val partnerId: Long? = null,
     val status: PaymentStatus? = null,
-    @get:JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    val from: LocalDateTime? = null,
-    @get:JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    val to: LocalDateTime? = null,
+    val from: Instant? = null,
+    val to: Instant? = null,
     val limit: Int = 20,
-    @get:JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    val cursorCreatedAt: LocalDateTime? = null,
+    val cursorCreatedAt: Instant? = null,
     val cursorId: Long? = null,
 )
