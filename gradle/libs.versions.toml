@@ -3,6 +3,7 @@ jackson = "2.16.1"
 mockk = "1.13.5"
 junit-platform = "1.10.2"
 fixture = "1.2.0"
+springdoc-openapi = "2.7.0"
 
 [libraries]
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }
@@ -26,6 +27,8 @@ database-mariadb = { module = "org.mariadb.jdbc:mariadb-java-client" }
 
 test-junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform" }
 test-fixture = { module = "com.appmattus.fixture:fixture", version.ref = "fixture" }
+
+springdoc-openapi-starter-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc-openapi" }
 
 [bundles]
 jackson = [
