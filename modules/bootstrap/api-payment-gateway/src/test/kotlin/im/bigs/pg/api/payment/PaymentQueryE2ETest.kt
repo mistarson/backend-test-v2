@@ -1,17 +1,9 @@
 package im.bigs.pg.api.payment
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import im.bigs.pg.api.payment.dto.QueryResponse
-import im.bigs.pg.application.payment.port.`in`.PaymentUseCase
-import im.bigs.pg.application.payment.port.`in`.PaymentCommand
-import im.bigs.pg.application.payment.port.out.PaymentOutPort
+import im.bigs.pg.api.factory.ApiTestDataFactory
+import im.bigs.pg.api.BaseIntegrationTest
 import im.bigs.pg.domain.payment.PaymentStatus
-import im.bigs.pg.infra.persistence.partner.entity.FeePolicyEntity
-import im.bigs.pg.infra.persistence.partner.entity.PartnerEntity
-import im.bigs.pg.infra.persistence.partner.repository.FeePolicyJpaRepository
-import im.bigs.pg.infra.persistence.partner.repository.PartnerJpaRepository
-import im.bigs.pg.infra.persistence.payment.entity.PaymentEntity
-import im.bigs.pg.infra.persistence.payment.repository.PaymentJpaRepository
+import im.bigs.pg.domain.partner.Partner
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -19,13 +11,9 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
-import org.springframework.test.web.servlet.MockMvc
-import org.springframework.test.web.servlet.get
 import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
 import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneOffset
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -39,40 +27,18 @@ import kotlin.test.assertTrue
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
-class PaymentQueryE2ETest {
+class PaymentQueryE2ETest : BaseIntegrationTest() {
 
     @Autowired
-    lateinit var mockMvc: MockMvc
+    lateinit var testDataFactory: ApiTestDataFactory
 
-    @Autowired
-    lateinit var objectMapper: ObjectMapper
-
-    @Autowired
-    lateinit var paymentOutPort: PaymentOutPort
-
-    @Autowired
-    lateinit var paymentService: PaymentUseCase
-
-    // 테스트 데이터 설정을 위한 리포지토리 (TestDataFactory에서 사용)
-    @Autowired
-    lateinit var partnerRepo: PartnerJpaRepository
-
-    @Autowired
-    lateinit var feePolicyRepo: FeePolicyJpaRepository
-
-    @Autowired
-    lateinit var paymentRepo: PaymentJpaRepository
-
-    private lateinit var testDataFactory: TestDataFactory
-    private lateinit var partner1: PartnerEntity
+    private lateinit var partner1: Partner
 
     @BeforeEach
     fun setup() {
-        testDataFactory = TestDataFactory(partnerRepo, feePolicyRepo)
-        
         partner1 = testDataFactory.createPartner("PARTNER1", "Partner 1", true)
         testDataFactory.createFeePolicy(
-            partnerId = partner1.id!!,
+            partnerId = partner1.id,
             effectiveFrom = "2024-01-01T00:00:00Z",
             percentage = BigDecimal("0.0300"),
             fixedFee = BigDecimal.ZERO,
@@ -85,15 +51,15 @@ class PaymentQueryE2ETest {
         // Given: partner2 생성 및 결제 3개 생성
         val partner2 = testDataFactory.createPartner("PARTNER2", "Partner 2", true)
         testDataFactory.createFeePolicy(
-            partnerId = partner2.id!!,
+            partnerId = partner2.id,
             effectiveFrom = "2024-01-01T00:00:00Z",
             percentage = BigDecimal("0.0250"),
             fixedFee = BigDecimal("50"),
         )
         val paymentTime = Instant.parse("2024-01-15T12:00:00Z")
-        createPayment(partner1.id!!, BigDecimal("10000"), paymentTime)
-        createPayment(partner1.id!!, BigDecimal("20000"), paymentTime.plusSeconds(1))
-        createPayment(partner2.id!!, BigDecimal("15000"), paymentTime.plusSeconds(2))
+        testDataFactory.createPayment(partner1.id, BigDecimal("10000"), paymentTime)
+        testDataFactory.createPayment(partner1.id, BigDecimal("20000"), paymentTime.plusSeconds(1))
+        testDataFactory.createPayment(partner2.id, BigDecimal("15000"), paymentTime.plusSeconds(2))
 
         // When: 필터 없이 조회
         val response = getQueryResponse("/api/v1/payments")
@@ -110,15 +76,15 @@ class PaymentQueryE2ETest {
         // Given: partner2 생성 및 파트너별 결제 생성
         val partner2 = testDataFactory.createPartner("PARTNER2", "Partner 2", true)
         testDataFactory.createFeePolicy(
-            partnerId = partner2.id!!,
+            partnerId = partner2.id,
             effectiveFrom = "2024-01-01T00:00:00Z",
             percentage = BigDecimal("0.0250"),
             fixedFee = BigDecimal("50"),
         )
         val paymentTime = Instant.parse("2024-01-15T12:00:00Z")
-        createPayment(partner1.id!!, BigDecimal("10000"), paymentTime)
-        createPayment(partner1.id!!, BigDecimal("20000"), paymentTime.plusSeconds(1))
-        createPayment(partner2.id!!, BigDecimal("15000"), paymentTime.plusSeconds(2))
+        testDataFactory.createPayment(partner1.id, BigDecimal("10000"), paymentTime)
+        testDataFactory.createPayment(partner1.id, BigDecimal("20000"), paymentTime.plusSeconds(1))
+        testDataFactory.createPayment(partner2.id, BigDecimal("15000"), paymentTime.plusSeconds(2))
 
         // When: 파트너 1로 필터링
         val response = getQueryResponse("/api/v1/payments?partnerId=${partner1.id}")
@@ -135,9 +101,9 @@ class PaymentQueryE2ETest {
     fun `상태로 필터링하여 APPROVED 상태의 결제만 조회한다`() {
         // Given: APPROVED와 CANCELED 상태의 결제 생성
         val paymentTime = Instant.parse("2024-01-15T12:00:00Z")
-        createPayment(partner1.id!!, BigDecimal("10000"), paymentTime, PaymentStatus.APPROVED)
-        createPayment(partner1.id!!, BigDecimal("20000"), paymentTime.plusSeconds(1), PaymentStatus.APPROVED)
-        createPayment(partner1.id!!, BigDecimal("15000"), paymentTime.plusSeconds(2), PaymentStatus.CANCELED)
+        testDataFactory.createPayment(partner1.id, BigDecimal("10000"), paymentTime, PaymentStatus.APPROVED)
+        testDataFactory.createPayment(partner1.id, BigDecimal("20000"), paymentTime.plusSeconds(1), PaymentStatus.APPROVED)
+        testDataFactory.createPayment(partner1.id, BigDecimal("15000"), paymentTime.plusSeconds(2), PaymentStatus.CANCELED)
 
         // When: APPROVED 상태로 필터링
         val response = getQueryResponse("/api/v1/payments?status=APPROVED")
@@ -154,7 +120,7 @@ class PaymentQueryE2ETest {
         // Given: partner2 생성 및 기간별 결제 생성
         val partner2 = testDataFactory.createPartner("PARTNER2", "Partner 2", true)
         testDataFactory.createFeePolicy(
-            partnerId = partner2.id!!,
+            partnerId = partner2.id,
             effectiveFrom = "2024-01-01T00:00:00Z",
             percentage = BigDecimal("0.0250"),
             fixedFee = BigDecimal("50"),
@@ -164,10 +130,10 @@ class PaymentQueryE2ETest {
         val toTime = Instant.parse("2024-01-20T23:59:59Z")
         val outOfRangeTime = Instant.parse("2024-02-01T00:00:00Z")
 
-        createPayment(partner1.id!!, BigDecimal("10000"), earlyTime) // 포함
-        createPayment(partner1.id!!, BigDecimal("20000"), midTime) // 포함
-        createPayment(partner1.id!!, BigDecimal("15000"), toTime) // 포함 (2024-01-20 23:59:59 < 2024-01-21 00:00:00)
-        createPayment(partner2.id!!, BigDecimal("5000"), outOfRangeTime) // 제외
+        testDataFactory.createPayment(partner1.id, BigDecimal("10000"), earlyTime) // 포함
+        testDataFactory.createPayment(partner1.id, BigDecimal("20000"), midTime) // 포함
+        testDataFactory.createPayment(partner1.id, BigDecimal("15000"), toTime) // 포함 (2024-01-20 23:59:59 < 2024-01-21 00:00:00)
+        testDataFactory.createPayment(partner2.id, BigDecimal("5000"), outOfRangeTime) // 제외
 
         // When: 2024-01-10 ~ 2024-01-21 00:00:00 기간으로 필터링
         val response = getQueryResponse(
@@ -186,7 +152,7 @@ class PaymentQueryE2ETest {
         // Given: partner2 생성 및 다양한 조건의 결제 생성
         val partner2 = testDataFactory.createPartner("PARTNER2", "Partner 2", true)
         testDataFactory.createFeePolicy(
-            partnerId = partner2.id!!,
+            partnerId = partner2.id,
             effectiveFrom = "2024-01-01T00:00:00Z",
             percentage = BigDecimal("0.0250"),
             fixedFee = BigDecimal("50"),
@@ -194,9 +160,9 @@ class PaymentQueryE2ETest {
         val midTime = Instant.parse("2024-01-15T12:00:00Z")
         val outOfRangeTime = Instant.parse("2024-02-01T00:00:00Z")
 
-        createPayment(partner1.id!!, BigDecimal("10000"), midTime) // 파트너1, 기간내
-        createPayment(partner1.id!!, BigDecimal("20000"), outOfRangeTime) // 파트너1, 기간외
-        createPayment(partner2.id!!, BigDecimal("15000"), midTime) // 파트너2, 기간내
+        testDataFactory.createPayment(partner1.id, BigDecimal("10000"), midTime) // 파트너1, 기간내
+        testDataFactory.createPayment(partner1.id, BigDecimal("20000"), outOfRangeTime) // 파트너1, 기간외
+        testDataFactory.createPayment(partner2.id, BigDecimal("15000"), midTime) // 파트너2, 기간내
 
         // When: 파트너1, APPROVED, 기간 필터 적용
         val response = getQueryResponse(
@@ -216,7 +182,7 @@ class PaymentQueryE2ETest {
         // Given: 4개의 결제 생성 (limit=2로 페이지네이션)
         val paymentTime = Instant.parse("2024-01-15T12:00:00Z")
         repeat(4) { i ->
-            createPayment(partner1.id!!, BigDecimal("${(i + 1) * 10000}"), paymentTime.plusSeconds(i.toLong()))
+            testDataFactory.createPayment(partner1.id, BigDecimal("${(i + 1) * 10000}"), paymentTime.plusSeconds(i.toLong()))
         }
 
         // When: 첫 페이지 조회 (limit=2)
@@ -242,7 +208,7 @@ class PaymentQueryE2ETest {
         // Given: 3개의 결제 생성 (limit=2로 마지막 페이지는 1개)
         val paymentTime = Instant.parse("2024-01-15T12:00:00Z")
         repeat(3) { i ->
-            createPayment(partner1.id!!, BigDecimal("${(i + 1) * 10000}"), paymentTime.plusSeconds(i.toLong()))
+            testDataFactory.createPayment(partner1.id, BigDecimal("${(i + 1) * 10000}"), paymentTime.plusSeconds(i.toLong()))
         }
 
         // When: 첫 페이지 조회
@@ -265,16 +231,16 @@ class PaymentQueryE2ETest {
         // Given: partner2 생성 및 파트너별 결제 생성
         val partner2 = testDataFactory.createPartner("PARTNER2", "Partner 2", true)
         testDataFactory.createFeePolicy(
-            partnerId = partner2.id!!,
+            partnerId = partner2.id,
             effectiveFrom = "2024-01-01T00:00:00Z",
             percentage = BigDecimal("0.0250"),
             fixedFee = BigDecimal("50"),
         )
         val paymentTime = Instant.parse("2024-01-15T12:00:00Z")
-        createPayment(partner1.id!!, BigDecimal("10000"), paymentTime)
-        createPayment(partner1.id!!, BigDecimal("20000"), paymentTime.plusSeconds(1))
-        createPayment(partner1.id!!, BigDecimal("15000"), paymentTime.plusSeconds(2))
-        createPayment(partner2.id!!, BigDecimal("5000"), paymentTime.plusSeconds(3))
+        testDataFactory.createPayment(partner1.id, BigDecimal("10000"), paymentTime)
+        testDataFactory.createPayment(partner1.id, BigDecimal("20000"), paymentTime.plusSeconds(1))
+        testDataFactory.createPayment(partner1.id, BigDecimal("15000"), paymentTime.plusSeconds(2))
+        testDataFactory.createPayment(partner2.id, BigDecimal("5000"), paymentTime.plusSeconds(3))
 
         // When: 파트너1로 필터링하여 첫 페이지 조회 (limit=2)
         val response = getQueryResponse("/api/v1/payments?partnerId=${partner1.id}&limit=2")
@@ -290,8 +256,8 @@ class PaymentQueryE2ETest {
     fun `잘못된 커서 처리 유효하지 않은 커서는 무시하고 첫 페이지를 반환한다`() {
         // Given: 결제 생성
         val paymentTime = Instant.parse("2024-01-15T12:00:00Z")
-        createPayment(partner1.id!!, BigDecimal("10000"), paymentTime)
-        createPayment(partner1.id!!, BigDecimal("20000"), paymentTime.plusSeconds(1))
+        testDataFactory.createPayment(partner1.id, BigDecimal("10000"), paymentTime)
+        testDataFactory.createPayment(partner1.id, BigDecimal("20000"), paymentTime.plusSeconds(1))
 
         // When: 유효하지 않은 커서로 조회
         val response = getQueryResponse("/api/v1/payments?cursor=INVALID_CURSOR")
@@ -305,9 +271,9 @@ class PaymentQueryE2ETest {
     fun `정렬 검증 createdAt desc, id desc 순서로 정렬된다`() {
         // Given: 같은 시간에 여러 결제 생성 (ID로 구분)
         val sameTime = Instant.parse("2024-01-15T12:00:00Z")
-        createPayment(partner1.id!!, BigDecimal("10000"), sameTime)
-        createPayment(partner1.id!!, BigDecimal("20000"), sameTime)
-        createPayment(partner1.id!!, BigDecimal("15000"), sameTime)
+        testDataFactory.createPayment(partner1.id, BigDecimal("10000"), sameTime)
+        testDataFactory.createPayment(partner1.id, BigDecimal("20000"), sameTime)
+        testDataFactory.createPayment(partner1.id, BigDecimal("15000"), sameTime)
 
         // When: 조회
         val response = getQueryResponse("/api/v1/payments?partnerId=${partner1.id}")
@@ -321,57 +287,6 @@ class PaymentQueryE2ETest {
         }
     }
 
-    private fun createPayment(
-        partnerId: Long,
-        amount: BigDecimal,
-        createdAt: Instant,
-        status: PaymentStatus = PaymentStatus.APPROVED,
-    ) {
-        if (status == PaymentStatus.APPROVED) {
-            // PaymentService를 통해 결제 생성
-            val savedPayment = paymentService.pay(
-                PaymentCommand(
-                    partnerId = partnerId,
-                    amount = amount,
-                    cardLast4 = "4242",
-                )
-            )
-            // createdAt을 지정된 시간으로 업데이트 (정렬 테스트를 위해)
-            val entity = paymentRepo.findById(savedPayment.id!!).orElse(null)
-            if (entity != null) {
-                entity.createdAt = createdAt
-                entity.updatedAt = createdAt
-                paymentRepo.save(entity)
-            }
-        } else {
-            // CANCELED 상태는 직접 엔티티 생성
-            paymentRepo.save(
-                PaymentEntity(
-                    partnerId = partnerId,
-                    amount = amount,
-                    appliedFeeRate = BigDecimal("0.0300"),
-                    feeAmount = amount.multiply(BigDecimal("0.0300")).setScale(0, java.math.RoundingMode.HALF_UP),
-                    netAmount = amount.multiply(BigDecimal("0.9700")).setScale(0, java.math.RoundingMode.HALF_UP),
-                    cardLast4 = "4242",
-                    approvalCode = "CANCEL-${System.currentTimeMillis()}",
-                    approvedAt = createdAt,
-                    status = status.name,
-                    createdAt = createdAt,
-                    updatedAt = createdAt,
-                )
-            )
-        }
-    }
 
-    private fun getQueryResponse(url: String): QueryResponse {
-        val result = mockMvc.get(url)
-            .andExpect {
-                status { isOk() }
-                content { contentType("application/json") }
-            }
-            .andReturn()
-
-        return objectMapper.readValue(result.response.contentAsString, QueryResponse::class.java)
-    }
 
 }

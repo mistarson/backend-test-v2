@@ -1,15 +1,10 @@
 package im.bigs.pg.api.payment
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import im.bigs.pg.api.factory.ApiTestDataFactory
 import im.bigs.pg.api.payment.dto.CreatePaymentRequest
 import im.bigs.pg.api.payment.dto.PaymentResponse
-import im.bigs.pg.application.partner.port.out.FeePolicyOutPort
-import im.bigs.pg.application.partner.port.out.PartnerOutPort
-import im.bigs.pg.application.pg.port.out.PartnerPgSupportOutPort
-import im.bigs.pg.application.pg.port.out.PaymentGatewayOutPort
+import im.bigs.pg.api.BaseIntegrationTest
 import im.bigs.pg.application.pg.port.out.PgApproveResult
-import im.bigs.pg.application.payment.port.`in`.PaymentCommand
-import im.bigs.pg.application.payment.port.`in`.PaymentUseCase
 import im.bigs.pg.domain.partner.Partner
 import im.bigs.pg.domain.payment.PaymentStatus
 import im.bigs.pg.domain.pg.PaymentGateway
@@ -28,7 +23,6 @@ import org.springframework.context.annotation.Import
 import org.springframework.context.annotation.Primary
 import org.springframework.http.MediaType
 import org.springframework.test.context.ActiveProfiles
-import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.post
 import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
@@ -45,39 +39,19 @@ import kotlin.test.assertNotNull
 @ActiveProfiles("test")
 @Transactional
 @Import(PartnerFeePolicyIntegrationTest.MockTestPgClientConfiguration::class)
-class PartnerFeePolicyIntegrationTest {
-
-    @Autowired
-    lateinit var mockMvc: MockMvc
-
-    @Autowired
-    lateinit var objectMapper: ObjectMapper
+class PartnerFeePolicyIntegrationTest : BaseIntegrationTest() {
 
     @Autowired
     lateinit var paymentRepo: PaymentJpaRepository
 
     @Autowired
-    lateinit var paymentService: PaymentUseCase
-
-    @Autowired
-    lateinit var partnerPort: PartnerOutPort
-
-    @Autowired
-    lateinit var feePolicyPort: FeePolicyOutPort
-
-    @Autowired
-    lateinit var partnerPgSupportPort: PartnerPgSupportOutPort
-
-    @Autowired
-    lateinit var paymentGatewayPort: PaymentGatewayOutPort
+    lateinit var testData: ApiTestDataFactory
 
     private lateinit var partner: Partner
-    private lateinit var testData: TestDataFactory
     private lateinit var testPg: PaymentGateway
 
     @BeforeEach
     fun setup() {
-        testData = TestDataFactory(partnerPort, feePolicyPort, partnerPgSupportPort, paymentGatewayPort)
         partner = testData.createPartner("E2E_PARTNER", "E2E Test Partner")
         testPg = testData.createPaymentGateway("TEST_PG")
         testData.createPartnerPgSupport(partner.id, testPg.id!!)
@@ -106,8 +80,6 @@ class PartnerFeePolicyIntegrationTest {
             return im.bigs.pg.application.pg.registry.PgClientRegistry(listOf(spiedTestPgClient, mockPgClient))
         }
     }
-
-    // ===== 헬퍼 메서드 =====
 
     /**
      * 결제 요청을 생성합니다.
@@ -265,9 +237,15 @@ class PartnerFeePolicyIntegrationTest {
         testData.createFeePolicy(changePartner.id, "2024-01-01T00:00:00Z", BigDecimal("0.0300"), BigDecimal("100"))
         testData.createPartnerPgSupport(changePartner.id, testPg.id!!)
 
-        // When: 기존 정책으로 10개 결제 완료 (UseCase 직접 호출로 성능 최적화)
+        // When: 기존 정책으로 10개 결제 완료 (Repository 직접 사용)
         repeat(10) {
-            paymentService.pay(PaymentCommand(partnerId = changePartner.id, amount = BigDecimal("10000")))
+            testData.createPayment(
+                partnerId = changePartner.id,
+                amount = BigDecimal("10000"),
+                appliedFeeRate = BigDecimal("0.0300"),
+                feeAmount = BigDecimal("400"), // 10000 * 0.03 + 100
+                netAmount = BigDecimal("9600"), // 10000 - 400
+            )
         }
 
         // Then: 모든 결제가 기존 정책(3% + 100원) 적용 (수수료: 400원)
@@ -282,8 +260,14 @@ class PartnerFeePolicyIntegrationTest {
         // Note: 현재 시점 기준으로 과거 시점의 정책을 추가하면, 가장 최근 정책으로 적용됩니다
         testData.createFeePolicy(changePartner.id, "2024-01-02T00:00:00Z", BigDecimal("0.0250"), BigDecimal("50"))
 
-        // When: 새로운 결제 시도
-        val newPayment = paymentService.pay(PaymentCommand(partnerId = changePartner.id, amount = BigDecimal("10000")))
+        // When: 새로운 결제 시도 (새 정책 2.5% + 50원 적용)
+        val newPayment = testData.createPayment(
+            partnerId = changePartner.id,
+            amount = BigDecimal("10000"),
+            appliedFeeRate = BigDecimal("0.0250"),
+            feeAmount = BigDecimal("300"), // 10000 * 0.025 + 50
+            netAmount = BigDecimal("9700"), // 10000 - 300
+        )
 
         // Then: 새 결제는 새로운 정책(2.5% + 50원) 적용, 기존 결제들은 기존 정책 유지
         assertEquals(BigDecimal("0.0250"), newPayment.appliedFeeRate, "새 정책(2.5%)이 적용되어야 합니다")
@@ -313,10 +297,24 @@ class PartnerFeePolicyIntegrationTest {
         }
 
         // When: 1000개의 결제를 처리 (각 결제는 순환적으로 Partner 선택)
-        // UseCase 직접 호출로 성능 최적화 (HTTP 요청 1000개는 너무 느림)
+        // Repository 직접 사용으로 테스트 데이터 생성
         repeat(1000) { i ->
             val selectedPartner = partners[i % 10]
-            paymentService.pay(PaymentCommand(partnerId = selectedPartner.id, amount = BigDecimal("10000")))
+            val partnerIndex = i % 10
+            val rate = BigDecimal("0.0${partnerIndex + 1}00") // 0.01, 0.02, ..., 0.10
+            val fixedFee = BigDecimal((partnerIndex + 1) * 10) // 10, 20, ..., 100
+            val feeAmount = BigDecimal("10000")
+                .multiply(rate)
+                .setScale(0, java.math.RoundingMode.HALF_UP) + fixedFee
+            val netAmount = BigDecimal("10000") - feeAmount
+            
+            testData.createPayment(
+                partnerId = selectedPartner.id,
+                amount = BigDecimal("10000"),
+                appliedFeeRate = rate,
+                feeAmount = feeAmount,
+                netAmount = netAmount,
+            )
         }
 
         // Then: 모든 결제가 올바른 정책 적용
