@@ -1,30 +1,26 @@
 package im.bigs.pg.api.payment
 
-import im.bigs.pg.application.partner.port.out.FeePolicyOutPort
-import im.bigs.pg.application.partner.port.out.PartnerOutPort
-import im.bigs.pg.application.pg.port.out.PartnerPgSupportOutPort
-import im.bigs.pg.application.pg.port.out.PaymentGatewayOutPort
-import im.bigs.pg.domain.partner.FeePolicy
-import im.bigs.pg.domain.partner.Partner
-import im.bigs.pg.domain.pg.PaymentGateway
+import im.bigs.pg.infra.persistence.partner.entity.FeePolicyEntity
+import im.bigs.pg.infra.persistence.partner.entity.PartnerEntity
+import im.bigs.pg.infra.persistence.partner.repository.FeePolicyJpaRepository
+import im.bigs.pg.infra.persistence.partner.repository.PartnerJpaRepository
 import java.math.BigDecimal
-import java.time.LocalDateTime
-import java.time.ZoneOffset
+import java.time.Instant
 
 /**
  * 테스트 데이터 생성을 위한 Factory 클래스.
+ * 테스트 데이터 설정을 위해 리포지토리를 직접 의존합니다.
  */
 class TestDataFactory(
-    private val partnerPort: PartnerOutPort,
-    private val feePolicyPort: FeePolicyOutPort,
-    private val partnerPgSupportPort: PartnerPgSupportOutPort,
-    private val paymentGatewayPort: PaymentGatewayOutPort
+    private val partnerRepo: PartnerJpaRepository,
+    private val feePolicyRepo: FeePolicyJpaRepository,
 ) {
     /**
      * 파트너를 생성하고 반환합니다.
      */
-    fun createPartner(code: String, name: String, active: Boolean = true): Partner {
-        return partnerPort.save(code, name, active)
+    fun createPartner(code: String, name: String, active: Boolean = true): PartnerEntity {
+        val entity = partnerRepo.save(PartnerEntity(code = code, name = name, active = active))
+        return entity
     }
 
     /**
@@ -35,38 +31,16 @@ class TestDataFactory(
         effectiveFrom: String,
         percentage: BigDecimal,
         fixedFee: BigDecimal
-    ): FeePolicy {
-        val instant = java.time.Instant.parse(effectiveFrom)
-        val localDateTime = LocalDateTime.ofInstant(instant, ZoneOffset.UTC)
-        return feePolicyPort.save(
-            partnerId = partnerId,
-            effectiveFrom = localDateTime,
-            percentage = percentage,
-            fixedFee = fixedFee
+    ): FeePolicyEntity {
+        val instant = Instant.parse(effectiveFrom)
+        val entity = feePolicyRepo.save(
+            FeePolicyEntity(
+                partnerId = partnerId,
+                effectiveFrom = instant,
+                percentage = percentage,
+                fixedFee = fixedFee,
+            )
         )
+        return entity
     }
-
-
-    /**
-     * PaymentGateway를 생성합니다.
-     */
-    fun createPaymentGateway(pgCode: String): PaymentGateway {
-        return paymentGatewayPort.save(
-            code = pgCode,
-            name = pgCode,
-            priority = 0,
-            active = true
-        )
-    }
-
-    /**
-     * Partner와 PaymentGateway를 연결합니다.
-     */
-    fun createPartnerPgSupport(
-        partnerId: Long,
-        paymentGatewayId: Long
-    ) {
-        partnerPgSupportPort.save(partnerId, paymentGatewayId)
-    }
-
 }

@@ -1,10 +1,17 @@
 package im.bigs.pg.application.payment.service
 
 import im.bigs.pg.application.payment.port.`in`.*
+import im.bigs.pg.application.payment.port.out.PaymentOutPort
+import im.bigs.pg.application.payment.port.out.PaymentPage
+import im.bigs.pg.application.payment.port.out.PaymentQuery
+import im.bigs.pg.application.payment.port.out.PaymentSummaryFilter
+import im.bigs.pg.application.payment.port.out.PaymentSummaryProjection
+import im.bigs.pg.application.payment.util.CursorEncoder
+import im.bigs.pg.domain.payment.PaymentStatus
 import im.bigs.pg.domain.payment.PaymentSummary
 import org.springframework.stereotype.Service
 import java.time.Instant
-import java.util.Base64
+import java.time.ZoneOffset
 
 /**
  * 결제 이력 조회 유스케이스 구현체.
@@ -12,7 +19,9 @@ import java.util.Base64
  * - 통계는 조회 조건과 동일한 집합을 대상으로 계산됩니다.
  */
 @Service
-class QueryPaymentsService : QueryPaymentsUseCase {
+class QueryPaymentsService(
+    private val paymentOutPort: PaymentOutPort,
+) : QueryPaymentsUseCase {
     /**
      * 필터를 기반으로 결제 내역을 조회합니다.
      *
@@ -23,32 +32,61 @@ class QueryPaymentsService : QueryPaymentsUseCase {
      * @return 조회 결과(목록/통계/커서)
      */
     override fun query(filter: QueryFilter): QueryResult {
+        // Step 1: 커서 디코딩 및 PaymentQuery 생성
+        val (cursorCreatedAt, cursorId) = CursorEncoder.decode(filter.cursor)
+        val paymentPage = paymentOutPort.findBy(
+            filter.toPaymentQuery(cursorCreatedAt, cursorId)
+        )
+
+        // Step 2: 통계 조회 (동일한 필터 조건 사용, 커서 제외)
+        val summary = paymentOutPort.summary(filter.toPaymentSummaryFilter())
+            .toPaymentSummary()
+
+        // Step 3: 결과 변환 및 커서 인코딩
         return QueryResult(
-            items = emptyList(),
-            summary = PaymentSummary(count = 0, totalAmount = java.math.BigDecimal.ZERO, totalNetAmount = java.math.BigDecimal.ZERO),
-            nextCursor = null,
-            hasNext = false,
+            items = paymentPage.items,
+            summary = summary,
+            nextCursor = paymentPage.toNextCursor(),
+            hasNext = paymentPage.hasNext,
         )
     }
 
-    /** 다음 페이지 이동을 위한 커서 인코딩. */
-    private fun encodeCursor(createdAt: Instant?, id: Long?): String? {
-        if (createdAt == null || id == null) return null
-        val raw = "${createdAt.toEpochMilli()}:$id"
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(raw.toByteArray())
-    }
-
-    /** 요청으로 전달된 커서 복원. 유효하지 않으면 null 커서로 간주합니다. */
-    private fun decodeCursor(cursor: String?): Pair<Instant?, Long?> {
-        if (cursor.isNullOrBlank()) return null to null
-        return try {
-            val raw = String(Base64.getUrlDecoder().decode(cursor))
-            val parts = raw.split(":")
-            val ts = parts[0].toLong()
-            val id = parts[1].toLong()
-            Instant.ofEpochMilli(ts) to id
-        } catch (e: Exception) {
-            null to null
-        }
-    }
 }
+
+/** QueryFilter를 PaymentQuery로 변환합니다. */
+private fun QueryFilter.toPaymentQuery(cursorCreatedAt: Instant?, cursorId: Long?): PaymentQuery {
+    return PaymentQuery(
+        partnerId = this.partnerId,
+        status = this.status?.let { PaymentStatus.valueOf(it) },
+        from = this.from?.toInstant(ZoneOffset.UTC),
+        to = this.to?.toInstant(ZoneOffset.UTC),
+        limit = this.limit,
+        cursorCreatedAt = cursorCreatedAt,
+        cursorId = cursorId,
+    )
+}
+
+/** QueryFilter를 PaymentSummaryFilter로 변환합니다. (커서 제외) */
+private fun QueryFilter.toPaymentSummaryFilter(): PaymentSummaryFilter {
+    return PaymentSummaryFilter(
+        partnerId = this.partnerId,
+        status = this.status?.let { PaymentStatus.valueOf(it) },
+        from = this.from,
+        to = this.to,
+    )
+}
+
+/** PaymentSummaryProjection을 PaymentSummary로 변환합니다. */
+private fun PaymentSummaryProjection.toPaymentSummary(): PaymentSummary {
+    return PaymentSummary(
+        count = this.count,
+        totalAmount = this.totalAmount,
+        totalNetAmount = this.totalNetAmount,
+    )
+}
+
+/** PaymentPage에서 다음 페이지 커서를 생성합니다. */
+private fun PaymentPage.toNextCursor(): String? =
+    takeIf { hasNext }?.let {
+        CursorEncoder.encode(nextCursorCreatedAt, nextCursorId)
+    }

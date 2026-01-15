@@ -5,19 +5,18 @@ import im.bigs.pg.application.payment.port.`in`.PaymentCommand
 import im.bigs.pg.application.payment.port.`in`.*
 import im.bigs.pg.api.payment.dto.CreatePaymentRequest
 import im.bigs.pg.api.payment.dto.PaymentResponse
+import im.bigs.pg.api.payment.dto.QueryRequest
 import im.bigs.pg.api.payment.dto.QueryResponse
 import im.bigs.pg.api.payment.dto.Summary
 import jakarta.validation.Valid
-import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.ResponseEntity
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.ModelAttribute
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
-import java.time.LocalDateTime
 
 /**
  * 결제 API 진입점.
@@ -64,25 +63,22 @@ class PaymentController(
     /**
      * 결제 조회(커서 기반 페이지네이션 + 통계).
      *
-     * @param partnerId 제휴사 필터
-     * @param status 상태 필터
-     * @param from 조회 시작 시각(ISO-8601)
-     * @param to 조회 종료 시각(ISO-8601)
-     * @param cursor 다음 페이지 커서
-     * @param limit 페이지 크기(기본 20)
+     * @param request 조회 요청 파라미터
      * @return 목록/통계/커서 정보
      */
     @GetMapping
     fun query(
-        @RequestParam(required = false) partnerId: Long?,
-        @RequestParam(required = false) status: String?,
-        @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") from: LocalDateTime?,
-        @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") to: LocalDateTime?,
-        @RequestParam(required = false) cursor: String?,
-        @RequestParam(defaultValue = "20") limit: Int,
+        @ModelAttribute @Valid request: QueryRequest,
     ): ResponseEntity<QueryResponse> {
         val res = queryPaymentsUseCase.query(
-            QueryFilter(partnerId, status, from, to, cursor, limit),
+            QueryFilter(
+                partnerId = request.partnerId,
+                status = request.status,
+                from = request.from,
+                to = request.to,
+                cursor = request.cursor,
+                limit = request.limit,
+            ),
         )
         return ResponseEntity.ok(
             QueryResponse(
