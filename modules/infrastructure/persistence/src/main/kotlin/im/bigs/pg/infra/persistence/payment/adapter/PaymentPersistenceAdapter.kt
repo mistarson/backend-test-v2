@@ -27,9 +27,9 @@ class PaymentPersistenceAdapter(
         val list = repo.pageBy(
             partnerId = query.partnerId,
             status = query.status?.name,
-            fromAt = query.from?.toInstant(ZoneOffset.UTC),
-            toAt = query.to?.toInstant(ZoneOffset.UTC),
-            cursorCreatedAt = query.cursorCreatedAt?.toInstant(ZoneOffset.UTC),
+            fromAt = query.from,
+            toAt = query.to,
+            cursorCreatedAt = query.cursorCreatedAt,
             cursorId = query.cursorId,
             org = PageRequest.of(0, pageSize + 1),
         )
@@ -39,7 +39,7 @@ class PaymentPersistenceAdapter(
         return PaymentPage(
             items = items.map { it.toDomain() },
             hasNext = hasNext,
-            nextCursorCreatedAt = last?.createdAt?.let { java.time.LocalDateTime.ofInstant(it, ZoneOffset.UTC) },
+            nextCursorCreatedAt = last?.createdAt,
             nextCursorId = last?.id,
         )
     }
