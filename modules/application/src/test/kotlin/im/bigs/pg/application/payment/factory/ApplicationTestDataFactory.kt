@@ -5,6 +5,7 @@ import im.bigs.pg.application.pg.port.out.PgApproveRequest
 import im.bigs.pg.application.pg.port.out.PgApproveResult
 import im.bigs.pg.domain.partner.FeePolicy
 import im.bigs.pg.domain.partner.Partner
+import im.bigs.pg.domain.payment.Payment
 import im.bigs.pg.domain.payment.PaymentStatus
 import java.math.BigDecimal
 import java.time.Instant
@@ -101,4 +102,30 @@ object ApplicationTestDataFactory {
         maskedCardLast4 = maskedCardLast4,
         amount = amount
     )
+
+    /**
+     * 테스트용 Payment를 생성합니다.
+     */
+    fun createPayment(
+        id: Long,
+        partnerId: Long,
+        amount: BigDecimal,
+        status: PaymentStatus,
+        createdAt: LocalDateTime = LocalDateTime.now(ZoneOffset.UTC),
+    ): Payment {
+        return Payment(
+            id = id,
+            partnerId = partnerId,
+            amount = amount,
+            appliedFeeRate = BigDecimal("0.0300"),
+            feeAmount = amount.multiply(BigDecimal("0.0300")).setScale(0, java.math.RoundingMode.HALF_UP),
+            netAmount = amount.multiply(BigDecimal("0.9700")).setScale(0, java.math.RoundingMode.HALF_UP),
+            cardLast4 = "4242",
+            approvalCode = "APP$id",
+            approvedAt = createdAt,
+            status = status,
+            createdAt = createdAt,
+            updatedAt = createdAt,
+        )
+    }
 }
