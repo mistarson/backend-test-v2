@@ -1,7 +1,7 @@
-package im.bigs.pg.infra.persistence
+package im.bigs.pg.infra.persistence.payment
 
 import im.bigs.pg.infra.persistence.config.JpaConfig
-import im.bigs.pg.infra.persistence.payment.entity.PaymentEntity
+import im.bigs.pg.infra.persistence.factory.PersistenceTestDataFactory
 import im.bigs.pg.infra.persistence.payment.repository.PaymentJpaRepository
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -10,37 +10,19 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
 import org.springframework.data.domain.PageRequest
 import org.springframework.test.context.ContextConfiguration
 import java.math.BigDecimal
-import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 @DataJpaTest
-@ContextConfiguration(classes = [JpaConfig::class])
+@ContextConfiguration(classes = [JpaConfig::class, PersistenceTestDataFactory::class])
 class 결제저장소커서페이징Test @Autowired constructor(
     val paymentRepo: PaymentJpaRepository,
+    val testData: PersistenceTestDataFactory,
 ) {
     @Test
     @DisplayName("커서 페이징과 통계가 일관되어야 한다")
     fun `커서 페이징과 통계가 일관되어야 한다`() {
-        val baseTs = Instant.parse("2024-01-01T00:00:00Z")
-        repeat(35) { i ->
-            paymentRepo.save(
-                PaymentEntity(
-                    partnerId = 1L,
-                    amount = BigDecimal("1000"),
-                    appliedFeeRate = BigDecimal("0.0300"),
-                    feeAmount = BigDecimal("30"),
-                    netAmount = BigDecimal("970"),
-                    cardBin = null,
-                    cardLast4 = "%04d".format(i),
-                    approvalCode = "A$i",
-                    approvedAt = baseTs.plusSeconds(i.toLong()),
-                    status = "APPROVED",
-                    createdAt = baseTs.plusSeconds(i.toLong()),
-                    updatedAt = baseTs.plusSeconds(i.toLong()),
-                ),
-            )
-        }
+        testData.createPaymentsForPaging(count = 35)
 
         val first = paymentRepo.pageBy(1L, "APPROVED", null, null, null, null, PageRequest.of(0, 21))
         assertEquals(21, first.size)
