@@ -21,8 +21,7 @@ interface PaymentJpaRepository : JpaRepository<PaymentEntity, Long> {
           and (:toAt is null or p.createdAt < :toAt)
           and (
                 (:cursorCreatedAt is null and :cursorId is null)
-             or (p.createdAt < :cursorCreatedAt)
-             or (p.createdAt = :cursorCreatedAt and p.id < :cursorId)
+             or (p.createdAt, p.id) < (:cursorCreatedAt, :cursorId)
           )
         order by p.createdAt desc, p.id desc
         """,
