@@ -1,12 +1,9 @@
 package im.bigs.pg.api.payment
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import im.bigs.pg.api.factory.ApiTestDataFactory
 import im.bigs.pg.api.payment.dto.CreatePaymentRequest
 import im.bigs.pg.api.payment.dto.PaymentResponse
-import im.bigs.pg.application.partner.port.out.FeePolicyOutPort
-import im.bigs.pg.application.partner.port.out.PartnerOutPort
-import im.bigs.pg.application.pg.port.out.PartnerPgSupportOutPort
-import im.bigs.pg.application.pg.port.out.PaymentGatewayOutPort
+import im.bigs.pg.api.BaseIntegrationTest
 import im.bigs.pg.application.pg.port.out.PgApproveResult
 import im.bigs.pg.domain.partner.Partner
 import im.bigs.pg.domain.payment.PaymentStatus
@@ -26,7 +23,6 @@ import org.springframework.context.annotation.Import
 import org.springframework.context.annotation.Primary
 import org.springframework.http.MediaType
 import org.springframework.test.context.ActiveProfiles
-import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.post
 import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
@@ -43,32 +39,13 @@ import kotlin.test.assertNotNull
 @ActiveProfiles("test")
 @Transactional
 @Import(PaymentControllerIntegrationTest.MockTestPgClientConfiguration::class)
-class PaymentControllerIntegrationTest {
-
-    @Autowired
-    lateinit var mockMvc: MockMvc
-
-    @Autowired
-    lateinit var objectMapper: ObjectMapper
-
-    @Autowired
-    lateinit var partnerPort: PartnerOutPort
-
-    @Autowired
-    lateinit var feePolicyPort: FeePolicyOutPort
-
-    @Autowired
-    lateinit var partnerPgSupportPort: PartnerPgSupportOutPort
-
-    @Autowired
-    lateinit var paymentGatewayPort: PaymentGatewayOutPort
+class PaymentControllerIntegrationTest : BaseIntegrationTest() {
 
     @Autowired
     lateinit var paymentRepository: PaymentJpaRepository
 
-    private val testData: TestDataFactory by lazy {
-        TestDataFactory(partnerPort, feePolicyPort, partnerPgSupportPort, paymentGatewayPort)
-    }
+    @Autowired
+    lateinit var testData: ApiTestDataFactory
 
     private lateinit var partner: Partner
     private lateinit var testPg: PaymentGateway

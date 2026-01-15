@@ -2,10 +2,8 @@ package im.bigs.pg.infra.persistence.partner.adapter
 
 import im.bigs.pg.application.partner.port.out.FeePolicyOutPort
 import im.bigs.pg.infra.persistence.config.JpaConfig
+import im.bigs.pg.infra.persistence.factory.PersistenceTestDataFactory
 import im.bigs.pg.infra.persistence.partner.entity.PartnerEntity
-import im.bigs.pg.infra.persistence.partner.repository.FeePolicyJpaRepository
-import im.bigs.pg.infra.persistence.partner.repository.PartnerJpaRepository
-import im.bigs.pg.infra.persistence.test.TestDataFactory
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -20,29 +18,22 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 @DataJpaTest
-@ContextConfiguration(classes = [FeePolicyPersistenceAdapter::class, JpaConfig::class])
+@ContextConfiguration(classes = [FeePolicyPersistenceAdapter::class, JpaConfig::class, PersistenceTestDataFactory::class])
 @ActiveProfiles("test")
 class FeePolicyPersistenceAdapterTest {
 
     @Autowired
-    lateinit var feePolicyRepository: FeePolicyOutPort
+    lateinit var feePolicyOutPort: FeePolicyOutPort
 
     @Autowired
-    lateinit var partnerRepo: PartnerJpaRepository
-
-    @Autowired
-    lateinit var feePolicyRepo: FeePolicyJpaRepository
+    lateinit var testData: PersistenceTestDataFactory
 
     private lateinit var partner: PartnerEntity
-    private lateinit var testData: TestDataFactory
 
     @BeforeEach
     fun setup() {
-        testData = TestDataFactory(partnerRepo, feePolicyRepo)
         partner = testData.createPartner("TIME_TEST", "Time Test Partner")
     }
-
-    // ===== 헬퍼 메서드 =====
 
     /**
      * 특정 시점의 정책을 조회하고 검증합니다.
@@ -53,7 +44,7 @@ class FeePolicyPersistenceAdapterTest {
         expectedPercentage: BigDecimal?,
         expectedFixedFee: BigDecimal?
     ) {
-        val policy = feePolicyRepository.findEffectivePolicy(partnerId, at)
+        val policy = feePolicyOutPort.findEffectivePolicy(partnerId, at)
         if (expectedPercentage == null) {
             assertNull(policy, "시점 $at 에는 정책이 없어야 합니다")
         } else {

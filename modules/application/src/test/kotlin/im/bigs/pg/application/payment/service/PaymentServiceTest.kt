@@ -2,14 +2,10 @@ package im.bigs.pg.application.payment.service
 
 import im.bigs.pg.application.partner.port.out.FeePolicyOutPort
 import im.bigs.pg.application.partner.port.out.PartnerOutPort
-import im.bigs.pg.application.payment.port.`in`.PaymentCommand
+import im.bigs.pg.application.payment.factory.ApplicationTestDataFactory
 import im.bigs.pg.application.payment.port.out.PaymentOutPort
 import im.bigs.pg.application.pg.exception.PgClientNotFoundException
-import im.bigs.pg.application.pg.port.out.PgApproveRequest
-import im.bigs.pg.application.pg.port.out.PgApproveResult
 import im.bigs.pg.application.pg.service.PgApprovalService
-import im.bigs.pg.domain.partner.FeePolicy
-import im.bigs.pg.domain.partner.Partner
 import im.bigs.pg.domain.payment.Payment
 import im.bigs.pg.domain.payment.PaymentStatus
 import io.mockk.every
@@ -41,18 +37,18 @@ class 결제서비스Test {
         val productName = "테스트 상품"
         val approvalCode = "APPROVAL-456"
         val approvedAt = LocalDateTime.of(2024, 1, 15, 10, 30, 0)
-        val feePolicy = TestDataFactory.defaultFeePolicy(partnerId = partnerId)
+        val feePolicy = ApplicationTestDataFactory.defaultFeePolicy(partnerId = partnerId)
 
-        every { partnerRepo.findById(partnerId) } returns TestDataFactory.defaultPartner(partnerId)
+        every { partnerRepo.findById(partnerId) } returns ApplicationTestDataFactory.defaultPartner(partnerId)
         every { feeRepo.findEffectivePolicy(partnerId, any()) } returns feePolicy
-        every { pgApprovalService.approve(any()) } returns TestDataFactory.defaultPgApproveResult(
+        every { pgApprovalService.approve(any()) } returns ApplicationTestDataFactory.defaultPgApproveResult(
             approvalCode = approvalCode,
             approvedAt = approvedAt
         )
         val savedSlot = slot<Payment>()
         every { paymentRepo.save(capture(savedSlot)) } answers { savedSlot.captured.copy(id = 100L) }
 
-        val cmd = TestDataFactory.defaultPaymentCommand(
+        val cmd = ApplicationTestDataFactory.defaultPaymentCommand(
             partnerId = partnerId,
             amount = amount,
             cardBin = cardBin,
@@ -80,23 +76,23 @@ class 결제서비스Test {
     fun `선택적 필드가 null인 경우 null 값이 올바르게 처리되어야 한다`() {
         val partnerId = 2L
         val amount = BigDecimal("5000")
-        val feePolicy = TestDataFactory.defaultFeePolicy(
+        val feePolicy = ApplicationTestDataFactory.defaultFeePolicy(
             id = 20L,
             partnerId = partnerId,
             percentage = BigDecimal("0.0200"),
             fixedFee = BigDecimal("100")
         )
 
-        every { partnerRepo.findById(partnerId) } returns TestDataFactory.defaultPartner(partnerId)
+        every { partnerRepo.findById(partnerId) } returns ApplicationTestDataFactory.defaultPartner(partnerId)
         every { feeRepo.findEffectivePolicy(partnerId, any()) } returns feePolicy
-        every { pgApprovalService.approve(any()) } returns TestDataFactory.defaultPgApproveResult(
+        every { pgApprovalService.approve(any()) } returns ApplicationTestDataFactory.defaultPgApproveResult(
             approvalCode = "APPROVAL-789",
             approvedAt = LocalDateTime.of(2024, 2, 1, 12, 0, 0)
         )
         val savedSlot = slot<Payment>()
         every { paymentRepo.save(capture(savedSlot)) } answers { savedSlot.captured.copy(id = 200L) }
 
-        val cmd = TestDataFactory.defaultPaymentCommand(
+        val cmd = ApplicationTestDataFactory.defaultPaymentCommand(
             partnerId = partnerId,
             amount = amount,
             cardBin = null,
@@ -117,16 +113,16 @@ class 결제서비스Test {
     fun `PG 승인 결과가 CANCELED인 경우 Payment의 status가 CANCELED로 저장되어야 한다`() {
         val partnerId = 3L
         val amount = BigDecimal("8000")
-        val feePolicy = TestDataFactory.defaultFeePolicy(
+        val feePolicy = ApplicationTestDataFactory.defaultFeePolicy(
             id = 30L,
             partnerId = partnerId,
             percentage = BigDecimal("0.0150"),
             fixedFee = BigDecimal("50")
         )
 
-        every { partnerRepo.findById(partnerId) } returns TestDataFactory.defaultPartner(partnerId)
+        every { partnerRepo.findById(partnerId) } returns ApplicationTestDataFactory.defaultPartner(partnerId)
         every { feeRepo.findEffectivePolicy(partnerId, any()) } returns feePolicy
-        every { pgApprovalService.approve(any()) } returns TestDataFactory.defaultPgApproveResult(
+        every { pgApprovalService.approve(any()) } returns ApplicationTestDataFactory.defaultPgApproveResult(
             approvalCode = "APPROVAL-CANCELED",
             approvedAt = LocalDateTime.of(2024, 3, 1, 15, 45, 0),
             status = PaymentStatus.CANCELED
@@ -134,7 +130,7 @@ class 결제서비스Test {
         val savedSlot = slot<Payment>()
         every { paymentRepo.save(capture(savedSlot)) } answers { savedSlot.captured.copy(id = 300L) }
 
-        val cmd = TestDataFactory.defaultPaymentCommand(partnerId = partnerId, amount = amount)
+        val cmd = ApplicationTestDataFactory.defaultPaymentCommand(partnerId = partnerId, amount = amount)
         val result = service.pay(cmd)
 
         assertEquals(300L, result.id)
@@ -149,7 +145,7 @@ class 결제서비스Test {
 
         every { partnerRepo.findById(partnerId) } returns null
 
-        val cmd = TestDataFactory.defaultPaymentCommand(partnerId = partnerId)
+        val cmd = ApplicationTestDataFactory.defaultPaymentCommand(partnerId = partnerId)
         val exception = assertFailsWith<IllegalArgumentException> {
             service.pay(cmd)
         }
@@ -164,7 +160,7 @@ class 결제서비스Test {
     @DisplayName("Partner가 비활성화된 경우 - IllegalArgumentException 발생")
     fun `Partner가 비활성화된 경우 IllegalArgumentException이 발생해야 한다`() {
         val partnerId = 4L
-        val inactivePartner = TestDataFactory.defaultPartner(
+        val inactivePartner = ApplicationTestDataFactory.defaultPartner(
             id = partnerId,
             code = "INACTIVE",
             name = "Inactive Partner",
@@ -173,7 +169,7 @@ class 결제서비스Test {
 
         every { partnerRepo.findById(partnerId) } returns inactivePartner
 
-        val cmd = TestDataFactory.defaultPaymentCommand(partnerId = partnerId)
+        val cmd = ApplicationTestDataFactory.defaultPaymentCommand(partnerId = partnerId)
         val exception = assertFailsWith<IllegalArgumentException> {
             service.pay(cmd)
         }
@@ -189,10 +185,10 @@ class 결제서비스Test {
     fun `유효한 FeePolicy가 없는 경우 IllegalStateException이 발생해야 한다`() {
         val partnerId = 5L
 
-        every { partnerRepo.findById(partnerId) } returns TestDataFactory.defaultPartner(partnerId)
+        every { partnerRepo.findById(partnerId) } returns ApplicationTestDataFactory.defaultPartner(partnerId)
         every { feeRepo.findEffectivePolicy(partnerId, any()) } returns null
 
-        val cmd = TestDataFactory.defaultPaymentCommand(partnerId = partnerId)
+        val cmd = ApplicationTestDataFactory.defaultPaymentCommand(partnerId = partnerId)
         val exception = assertFailsWith<IllegalStateException> {
             service.pay(cmd)
         }
@@ -206,19 +202,19 @@ class 결제서비스Test {
     @DisplayName("PG Client를 찾을 수 없는 경우 - PgClientNotFoundException 전파")
     fun `PG Client를 찾을 수 없는 경우 PgClientNotFoundException이 전파되어야 한다`() {
         val partnerId = 6L
-        val feePolicy = TestDataFactory.defaultFeePolicy(
+        val feePolicy = ApplicationTestDataFactory.defaultFeePolicy(
             id = 60L,
             partnerId = partnerId,
             percentage = BigDecimal("0.0100"),
             fixedFee = BigDecimal("0")
         )
 
-        every { partnerRepo.findById(partnerId) } returns TestDataFactory.defaultPartner(partnerId)
+        every { partnerRepo.findById(partnerId) } returns ApplicationTestDataFactory.defaultPartner(partnerId)
         every { feeRepo.findEffectivePolicy(partnerId, any()) } returns feePolicy
         val pgException = PgClientNotFoundException("No supported PG found for partner")
         every { pgApprovalService.approve(any()) } throws pgException
 
-        val cmd = TestDataFactory.defaultPaymentCommand(partnerId = partnerId)
+        val cmd = ApplicationTestDataFactory.defaultPaymentCommand(partnerId = partnerId)
         val exception = assertFailsWith<PgClientNotFoundException> {
             service.pay(cmd)
         }
@@ -231,7 +227,7 @@ class 결제서비스Test {
     @DisplayName("Payment 저장 실패 시나리오 - 예외가 그대로 전파되어야 한다")
     fun `Payment 저장 실패 시 예외가 그대로 전파되어야 한다`() {
         val partnerId = 7L
-        val feePolicy = TestDataFactory.defaultFeePolicy(
+        val feePolicy = ApplicationTestDataFactory.defaultFeePolicy(
             id = 70L,
             partnerId = partnerId,
             percentage = BigDecimal("0.0200"),
@@ -239,15 +235,15 @@ class 결제서비스Test {
         )
         val saveException = RuntimeException("Database connection failed")
 
-        every { partnerRepo.findById(partnerId) } returns TestDataFactory.defaultPartner(partnerId)
+        every { partnerRepo.findById(partnerId) } returns ApplicationTestDataFactory.defaultPartner(partnerId)
         every { feeRepo.findEffectivePolicy(partnerId, any()) } returns feePolicy
-        every { pgApprovalService.approve(any()) } returns TestDataFactory.defaultPgApproveResult(
+        every { pgApprovalService.approve(any()) } returns ApplicationTestDataFactory.defaultPgApproveResult(
             approvalCode = "APPROVAL-999",
             approvedAt = LocalDateTime.of(2024, 4, 1, 9, 0, 0)
         )
         every { paymentRepo.save(any()) } throws saveException
 
-        val cmd = TestDataFactory.defaultPaymentCommand(partnerId = partnerId)
+        val cmd = ApplicationTestDataFactory.defaultPaymentCommand(partnerId = partnerId)
         val exception = assertFailsWith<RuntimeException> {
             service.pay(cmd)
         }
