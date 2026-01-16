@@ -1,0 +1,28 @@
+services:
+  mariadb:
+    image: mariadb:11.3
+    environment:
+      MARIADB_ROOT_PASSWORD: rootpassword
+      MARIADB_DATABASE: pgdb
+      MARIADB_USER: pguser
+      MARIADB_PASSWORD: pgpassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mariadb://mariadb:3306/pgdb?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: pguser
+      SPRING_DATASOURCE_PASSWORD: pgpassword
+    depends_on:
+      - mariadb
+
+volumes:
+  mariadb_data:
