@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.GetMapping
@@ -38,6 +39,7 @@ class PaymentController(
     private val paymentUseCase: PaymentUseCase,
     private val queryPaymentsUseCase: QueryPaymentsUseCase,
 ) {
+    private val logger = LoggerFactory.getLogger(javaClass)
 
     /**
      * 결제 생성.
@@ -64,6 +66,7 @@ class PaymentController(
     )
     @PostMapping
     fun create(@Valid @RequestBody req: CreatePaymentRequest): ResponseEntity<PaymentResponse> {
+        logger.debug("결제 생성 요청: partnerId={}, amount={}", req.partnerId, req.amount)
         val saved = paymentUseCase.pay(
             PaymentCommand(
                 partnerId = req.partnerId,
@@ -73,6 +76,7 @@ class PaymentController(
                 productName = req.productName,
             ),
         )
+        logger.info("결제 생성 완료: paymentId={}, partnerId={}, amount={}, status={}", saved.id, saved.partnerId, saved.amount, saved.status)
         return ResponseEntity.ok(PaymentResponse.from(saved))
     }
 
@@ -103,6 +107,7 @@ class PaymentController(
     fun query(
         @ModelAttribute @Valid request: QueryRequest,
     ): ResponseEntity<QueryResponse> {
+        logger.debug("결제 조회 요청: partnerId={}, status={}, from={}, to={}", request.partnerId, request.status, request.from, request.to)
         val res = queryPaymentsUseCase.query(
             QueryFilter(
                 partnerId = request.partnerId,
@@ -113,6 +118,7 @@ class PaymentController(
                 limit = request.limit,
             ),
         )
+        logger.debug("결제 조회 완료: count={}, totalAmount={}", res.summary.count, res.summary.totalAmount)
         return ResponseEntity.ok(
             QueryResponse(
                 items = res.items.map { PaymentResponse.from(it) },
