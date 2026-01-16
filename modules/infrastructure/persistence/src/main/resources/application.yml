@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: jdbc:mariadb://localhost:3306/pgdb?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=UTC
+    driver-class-name: org.mariadb.jdbc.Driver
+    username: pguser
+    password: pgpassword
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc.time_zone: UTC
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+    encoding: UTF-8
