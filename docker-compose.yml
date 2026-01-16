@@ -10,6 +10,11 @@ services:
       - "3306:3306"
     volumes:
       - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   app:
     build:
@@ -22,7 +27,8 @@ services:
       SPRING_DATASOURCE_USERNAME: pguser
       SPRING_DATASOURCE_PASSWORD: pgpassword
     depends_on:
-      - mariadb
+      mariadb:
+        condition: service_healthy
 
 volumes:
   mariadb_data:
