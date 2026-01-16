@@ -2,7 +2,6 @@ package im.bigs.pg.application.payment.service
 
 import im.bigs.pg.application.payment.factory.ApplicationTestDataFactory
 import im.bigs.pg.application.payment.port.`in`.QueryFilter
-import im.bigs.pg.application.payment.port.`in`.QueryResult
 import im.bigs.pg.application.payment.port.out.PaymentOutPort
 import im.bigs.pg.application.payment.port.out.PaymentPageWithSummary
 import im.bigs.pg.application.payment.port.out.PaymentSummaryProjection
@@ -20,7 +19,6 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 
 class QueryPaymentsServiceTest {
     private val paymentOutPort = mockk<PaymentOutPort>()

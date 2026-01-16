@@ -343,5 +343,4 @@ class PgApprovalServiceTest {
             assert(message.contains(pgCode.name))
         }
     }
-
 }

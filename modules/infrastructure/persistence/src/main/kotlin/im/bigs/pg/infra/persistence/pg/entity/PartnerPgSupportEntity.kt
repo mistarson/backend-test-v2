@@ -17,4 +17,3 @@ class PartnerPgSupportEntity(
     @Column(nullable = false, name = "payment_gateway_id")
     var paymentGatewayId: Long,
 )
-

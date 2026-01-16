@@ -21,4 +21,3 @@ class PaymentGatewayEntity(
     @Column(nullable = false)
     var active: Boolean = true,
 )
-

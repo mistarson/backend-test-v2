@@ -10,4 +10,3 @@ data class TestPgRequest(
     val password: String,
     val amount: Long,
 )
-

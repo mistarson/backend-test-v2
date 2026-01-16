@@ -1,9 +1,9 @@
 package im.bigs.pg.api.payment
 
+import im.bigs.pg.api.BaseIntegrationTest
 import im.bigs.pg.api.factory.ApiTestDataFactory
 import im.bigs.pg.api.payment.dto.CreatePaymentRequest
 import im.bigs.pg.api.payment.dto.PaymentResponse
-import im.bigs.pg.api.BaseIntegrationTest
 import im.bigs.pg.application.pg.port.out.PgApproveResult
 import im.bigs.pg.domain.partner.Partner
 import im.bigs.pg.domain.payment.PaymentStatus
@@ -85,171 +85,171 @@ class PaymentControllerIntegrationTest : BaseIntegrationTest() {
     @Test
     @DisplayName("POST /api/v1/payments - 기본 PG(testpgclient) 결제 성공")
     fun `기본 PG(testpgclient) 결제 성공`() {
-            // Given: 활성화된 파트너로 결제 요청
-            val request = CreatePaymentRequest(
-                partnerId = partner.id,
-                amount = BigDecimal("10000"),
-                cardBin = "123456",
-                cardLast4 = "4242",
-                productName = "테스트 상품"
-            )
+        // Given: 활성화된 파트너로 결제 요청
+        val request = CreatePaymentRequest(
+            partnerId = partner.id,
+            amount = BigDecimal("10000"),
+            cardBin = "123456",
+            cardLast4 = "4242",
+            productName = "테스트 상품"
+        )
 
-            // When: 결제 생성 API 호출
-            val result = mockMvc.post("/api/v1/payments") {
-                contentType = MediaType.APPLICATION_JSON
-                content = objectMapper.writeValueAsString(request)
-            }
-                .andExpect {
-                    status { isOk() }
-                    content { contentType(MediaType.APPLICATION_JSON) }
-                }
-                .andReturn()
-
-            val response = objectMapper.readValue(result.response.contentAsString, PaymentResponse::class.java)
-
-            // Then: HTTP 200 응답 및 응답 필드 정확성 확인
-            assertNotNull(response.id)
-            assertEquals(partner.id, response.partnerId)
-            assertEquals(BigDecimal("10000"), response.amount)
-            assertEquals(BigDecimal("0.0250"), response.appliedFeeRate)
-            assertEquals(BigDecimal("300"), response.feeAmount) // 10000 * 0.025 + 50
-            assertEquals(BigDecimal("9700"), response.netAmount) // 10000 - 300
-            assertEquals("4242", response.cardLast4)
-            assertEquals("APPROVAL-20240115-001234", response.approvalCode)
-            assertEquals(PaymentStatus.APPROVED, response.status)
-
-            // Then: Payment 엔티티가 DB에 정상 저장되었는지 확인
-            val savedPayment = paymentRepository.findById(response.id!!).orElse(null)
-            assertNotNull(savedPayment)
-            assertEquals(PaymentStatus.APPROVED, PaymentStatus.valueOf(savedPayment.status))
+        // When: 결제 생성 API 호출
+        val result = mockMvc.post("/api/v1/payments") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(request)
         }
+            .andExpect {
+                status { isOk() }
+                content { contentType(MediaType.APPLICATION_JSON) }
+            }
+            .andReturn()
+
+        val response = objectMapper.readValue(result.response.contentAsString, PaymentResponse::class.java)
+
+        // Then: HTTP 200 응답 및 응답 필드 정확성 확인
+        assertNotNull(response.id)
+        assertEquals(partner.id, response.partnerId)
+        assertEquals(BigDecimal("10000"), response.amount)
+        assertEquals(BigDecimal("0.0250"), response.appliedFeeRate)
+        assertEquals(BigDecimal("300"), response.feeAmount) // 10000 * 0.025 + 50
+        assertEquals(BigDecimal("9700"), response.netAmount) // 10000 - 300
+        assertEquals("4242", response.cardLast4)
+        assertEquals("APPROVAL-20240115-001234", response.approvalCode)
+        assertEquals(PaymentStatus.APPROVED, response.status)
+
+        // Then: Payment 엔티티가 DB에 정상 저장되었는지 확인
+        val savedPayment = paymentRepository.findById(response.id!!).orElse(null)
+        assertNotNull(savedPayment)
+        assertEquals(PaymentStatus.APPROVED, PaymentStatus.valueOf(savedPayment.status))
+    }
 
     @Test
     @DisplayName("POST /api/v1/payments - 존재하지 않는 파트너")
     fun `존재하지 않는 파트너`() {
-            // Given: 존재하지 않는 partnerId
-            val nonExistentPartnerId = 99999L
-            val request = CreatePaymentRequest(
-                partnerId = nonExistentPartnerId,
-                amount = BigDecimal("10000")
-            )
+        // Given: 존재하지 않는 partnerId
+        val nonExistentPartnerId = 99999L
+        val request = CreatePaymentRequest(
+            partnerId = nonExistentPartnerId,
+            amount = BigDecimal("10000")
+        )
 
-            // When & Then: HTTP 400 Bad Request 또는 404 Not Found
-            mockMvc.post("/api/v1/payments") {
-                contentType = MediaType.APPLICATION_JSON
-                content = objectMapper.writeValueAsString(request)
+        // When & Then: HTTP 400 Bad Request 또는 404 Not Found
+        mockMvc.post("/api/v1/payments") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(request)
+        }
+            .andExpect {
+                status { isBadRequest() }
+                content { contentType(MediaType.APPLICATION_JSON) }
             }
-                .andExpect {
-                    status { isBadRequest() }
-                    content { contentType(MediaType.APPLICATION_JSON) }
-                }
-                .andReturn()
+            .andReturn()
     }
 
     @Test
     @DisplayName("POST /api/v1/payments - 비활성화된 파트너")
     fun `비활성화된 파트너`() {
-            // Given: 비활성화된 파트너 생성
-            val inactivePartner = testData.createPartner("INACTIVE_PARTNER", "Inactive Partner", active = false)
-            testData.createFeePolicy(inactivePartner.id, "2020-01-01T00:00:00Z", BigDecimal("0.0250"), BigDecimal("50"))
-            testData.createPartnerPgSupport(inactivePartner.id, testPg.id!!)
+        // Given: 비활성화된 파트너 생성
+        val inactivePartner = testData.createPartner("INACTIVE_PARTNER", "Inactive Partner", active = false)
+        testData.createFeePolicy(inactivePartner.id, "2020-01-01T00:00:00Z", BigDecimal("0.0250"), BigDecimal("50"))
+        testData.createPartnerPgSupport(inactivePartner.id, testPg.id!!)
 
-            val request = CreatePaymentRequest(
-                partnerId = inactivePartner.id,
-                amount = BigDecimal("10000")
-            )
+        val request = CreatePaymentRequest(
+            partnerId = inactivePartner.id,
+            amount = BigDecimal("10000")
+        )
 
-            // When & Then: HTTP 400 Bad Request
-            mockMvc.post("/api/v1/payments") {
-                contentType = MediaType.APPLICATION_JSON
-                content = objectMapper.writeValueAsString(request)
+        // When & Then: HTTP 400 Bad Request
+        mockMvc.post("/api/v1/payments") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(request)
+        }
+            .andExpect {
+                status { isBadRequest() }
+                content { contentType(MediaType.APPLICATION_JSON) }
             }
-                .andExpect {
-                    status { isBadRequest() }
-                    content { contentType(MediaType.APPLICATION_JSON) }
-                }
-                .andReturn()
+            .andReturn()
     }
 
     @Test
     @DisplayName("POST /api/v1/payments - 결제 금액(amount) 유효성 실패 - amount가 0")
     fun `결제 금액(amount) 유효성 실패 - amount가 0`() {
-            // Given: amount = 0
-            val request = CreatePaymentRequest(
-                partnerId = partner.id,
-                amount = BigDecimal("0")
-            )
+        // Given: amount = 0
+        val request = CreatePaymentRequest(
+            partnerId = partner.id,
+            amount = BigDecimal("0")
+        )
 
-            // When & Then: HTTP 400 Bad Request
-            mockMvc.post("/api/v1/payments") {
-                contentType = MediaType.APPLICATION_JSON
-                content = objectMapper.writeValueAsString(request)
+        // When & Then: HTTP 400 Bad Request
+        mockMvc.post("/api/v1/payments") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(request)
+        }
+            .andExpect {
+                status { isBadRequest() }
             }
-                .andExpect {
-                    status { isBadRequest() }
-                }
-                .andReturn()
+            .andReturn()
     }
 
     @Test
     @DisplayName("POST /api/v1/payments - 결제 금액(amount) 유효성 실패 - amount가 음수")
     fun `결제 금액(amount) 유효성 실패 - amount가 음수`() {
-            // Given: amount = -1000
-            val request = CreatePaymentRequest(
-                partnerId = partner.id,
-                amount = BigDecimal("-1000")
-            )
+        // Given: amount = -1000
+        val request = CreatePaymentRequest(
+            partnerId = partner.id,
+            amount = BigDecimal("-1000")
+        )
 
-            // When & Then: HTTP 400 Bad Request
-            mockMvc.post("/api/v1/payments") {
-                contentType = MediaType.APPLICATION_JSON
-                content = objectMapper.writeValueAsString(request)
+        // When & Then: HTTP 400 Bad Request
+        mockMvc.post("/api/v1/payments") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(request)
+        }
+            .andExpect {
+                status { isBadRequest() }
             }
-                .andExpect {
-                    status { isBadRequest() }
-                }
-                .andReturn()
+            .andReturn()
     }
 
     @Test
     @DisplayName("POST /api/v1/payments - 필수 필드 누락 - partnerId 누락")
     fun `필수 필드 누락 - partnerId 누락`() {
-            // Given: partnerId가 누락된 요청
-            val requestJson = """
-                {
-                    "amount": 10000
-                }
-            """.trimIndent()
-
-            // When & Then: HTTP 400 Bad Request
-            mockMvc.post("/api/v1/payments") {
-                contentType = MediaType.APPLICATION_JSON
-                content = requestJson
+        // Given: partnerId가 누락된 요청
+        val requestJson = """
+            {
+                "amount": 10000
             }
-                .andExpect {
-                    status { isBadRequest() }
-                }
-                .andReturn()
+        """.trimIndent()
+
+        // When & Then: HTTP 400 Bad Request
+        mockMvc.post("/api/v1/payments") {
+            contentType = MediaType.APPLICATION_JSON
+            content = requestJson
+        }
+            .andExpect {
+                status { isBadRequest() }
+            }
+            .andReturn()
     }
 
     @Test
     @DisplayName("POST /api/v1/payments - 필수 필드 누락 - amount 누락")
     fun `필수 필드 누락 - amount 누락`() {
-            // Given: amount가 누락된 요청
-            val requestJson = """
-                {
-                    "partnerId": ${partner.id}
-                }
-            """.trimIndent()
-
-            // When & Then: HTTP 400 Bad Request
-            mockMvc.post("/api/v1/payments") {
-                contentType = MediaType.APPLICATION_JSON
-                content = requestJson
+        // Given: amount가 누락된 요청
+        val requestJson = """
+            {
+                "partnerId": ${partner.id}
             }
-                .andExpect {
-                    status { isBadRequest() }
-                }
-                .andReturn()
+        """.trimIndent()
+
+        // When & Then: HTTP 400 Bad Request
+        mockMvc.post("/api/v1/payments") {
+            contentType = MediaType.APPLICATION_JSON
+            content = requestJson
+        }
+            .andExpect {
+                status { isBadRequest() }
+            }
+            .andReturn()
     }
 }

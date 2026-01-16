@@ -16,7 +16,7 @@ import kotlin.test.assertTrue
 
 @DataJpaTest
 @ContextConfiguration(classes = [JpaConfig::class, PersistenceTestDataFactory::class])
-class 결제저장소커서페이징Test @Autowired constructor(
+class PaymentRepositoryPagingTest @Autowired constructor(
     val paymentRepo: PaymentJpaRepository,
     val testData: PersistenceTestDataFactory,
 ) {
@@ -136,5 +136,4 @@ class 결제저장소커서페이징Test @Autowired constructor(
         assertEquals(secondPage.sumOf { it.amount }, secondPageSummaryTotalAmount)
         assertEquals(secondPage.sumOf { it.netAmount }, secondPageSummaryTotalNet)
     }
-
 }

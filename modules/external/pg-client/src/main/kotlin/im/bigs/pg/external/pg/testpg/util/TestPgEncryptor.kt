@@ -56,4 +56,3 @@ class TestPgEncryptor(
         return digest.digest(apiKey.toByteArray(Charsets.UTF_8))
     }
 }
-

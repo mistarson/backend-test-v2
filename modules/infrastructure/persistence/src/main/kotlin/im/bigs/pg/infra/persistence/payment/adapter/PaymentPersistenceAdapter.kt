@@ -8,9 +8,9 @@ import im.bigs.pg.domain.payment.Payment
 import im.bigs.pg.domain.payment.PaymentStatus
 import im.bigs.pg.infra.persistence.payment.entity.PaymentEntity
 import im.bigs.pg.infra.persistence.payment.repository.PaymentJpaRepository
-import java.time.ZoneOffset
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
+import java.time.ZoneOffset
 
 /** PaymentOutPort 구현체(JPA 기반). */
 @Component
@@ -35,7 +35,7 @@ class PaymentPersistenceAdapter(
         val hasNext = list.size > pageSize
         val items = list.take(pageSize)
         val last = items.lastOrNull()
-        
+
         // summary는 현재 페이지의 items와 동일한 집합을 집계합니다.
         return PaymentPageWithSummary(
             items = items.map { it.toDomain() },

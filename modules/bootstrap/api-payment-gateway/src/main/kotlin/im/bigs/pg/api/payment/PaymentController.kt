@@ -1,13 +1,14 @@
 package im.bigs.pg.api.payment
 
-import im.bigs.pg.application.payment.port.`in`.PaymentUseCase
-import im.bigs.pg.application.payment.port.`in`.PaymentCommand
-import im.bigs.pg.application.payment.port.`in`.*
 import im.bigs.pg.api.payment.dto.CreatePaymentRequest
 import im.bigs.pg.api.payment.dto.PaymentResponse
 import im.bigs.pg.api.payment.dto.QueryRequest
 import im.bigs.pg.api.payment.dto.QueryResponse
 import im.bigs.pg.api.payment.dto.Summary
+import im.bigs.pg.application.payment.port.`in`.PaymentCommand
+import im.bigs.pg.application.payment.port.`in`.PaymentUseCase
+import im.bigs.pg.application.payment.port.`in`.QueryFilter
+import im.bigs.pg.application.payment.port.`in`.QueryPaymentsUseCase
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
@@ -37,12 +38,6 @@ class PaymentController(
     private val paymentUseCase: PaymentUseCase,
     private val queryPaymentsUseCase: QueryPaymentsUseCase,
 ) {
-
-    /** 결제 생성 요청 페이로드(간소화된 필드). */
-    
-
-    /** API 응답을 위한 변환용 DTO. 도메인 모델을 그대로 노출하지 않습니다. */
-    
 
     /**
      * 결제 생성.
@@ -80,9 +75,6 @@ class PaymentController(
         )
         return ResponseEntity.ok(PaymentResponse.from(saved))
     }
-
-    /** 목록 + 통계를 포함한 조회 응답. */
-    
 
     /**
      * 결제 조회(커서 기반 페이지네이션 + 통계).

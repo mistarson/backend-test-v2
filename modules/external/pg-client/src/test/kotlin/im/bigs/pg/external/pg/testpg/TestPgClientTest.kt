@@ -138,7 +138,7 @@ class TestPgClientTest {
             // Then: 성공 응답 및 금액 일치 확인
             assertTrue(result.approvalCode.isNotBlank(), "금액 ${amount}에 대한 승인 코드가 비어있습니다")
             assertNotNull(result.approvedAt, "금액 ${amount}에 대한 승인 시각이 null입니다")
-            assertEquals(amount, result.amount, "금액 ${amount} 응답 금액과 일치해야 함")
+            assertEquals(amount, result.amount, "금액 $amount 응답 금액과 일치해야 함")
             assertEquals(PaymentStatus.APPROVED, result.status, "금액 ${amount}에 대한 상태가 APPROVED가 아닙니다")
         }
     }
@@ -186,5 +186,4 @@ class TestPgClientTest {
         }
         assertEquals(HttpStatus.UNAUTHORIZED, exception.statusCode, "00000000-0000-4000-8000-000000000000 API key로 결제 시 401 에러가 발생해야 합니다")
     }
-
 }

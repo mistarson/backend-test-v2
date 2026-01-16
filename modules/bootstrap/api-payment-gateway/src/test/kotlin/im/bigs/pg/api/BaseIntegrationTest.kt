@@ -19,7 +19,7 @@ abstract class BaseIntegrationTest {
 
     /**
      * GET 요청을 보내고 QueryResponse를 파싱하여 반환합니다.
-     * 
+     *
      * @param url 요청 URL
      * @return 파싱된 QueryResponse
      */

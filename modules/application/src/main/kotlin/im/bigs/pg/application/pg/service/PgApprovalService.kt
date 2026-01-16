@@ -3,10 +3,8 @@ package im.bigs.pg.application.pg.service
 import im.bigs.pg.application.pg.exception.PgApprovalException
 import im.bigs.pg.application.pg.exception.PgClientNotFoundException
 import im.bigs.pg.application.pg.factory.PgApproveRequestFactory
-import im.bigs.pg.application.pg.port.out.BasePgApproveRequest
 import im.bigs.pg.application.pg.port.out.PgApproveRequest
 import im.bigs.pg.application.pg.port.out.PgApproveResult
-import im.bigs.pg.application.pg.port.out.PgClient
 import im.bigs.pg.application.pg.registry.PgClientRegistry
 import im.bigs.pg.application.pg.resolver.PgClientResolver
 import im.bigs.pg.domain.pg.PgCode
@@ -38,9 +36,9 @@ class PgApprovalService(
     }
 
     private fun tryApprove(
-            pgCode: PgCode,
-            request: PgApproveRequest,
-            failures: MutableList<Throwable>
+        pgCode: PgCode,
+        request: PgApproveRequest,
+        failures: MutableList<Throwable>
     ): PgApproveResult? {
         return runCatching {
             val client = pgClientRegistry.getClient(pgCode) ?: return null

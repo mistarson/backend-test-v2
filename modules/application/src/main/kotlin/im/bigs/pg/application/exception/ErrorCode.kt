@@ -11,4 +11,3 @@ enum class ErrorCode(
     PG_APPROVAL_FAILED(500, "PG Approval Failed"),
     PG_CLIENT_NOT_FOUND(500, "PG Client Not Found")
 }
-

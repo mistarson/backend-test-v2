@@ -9,8 +9,8 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
-import org.springframework.test.context.ContextConfiguration
 import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.context.ContextConfiguration
 import java.math.BigDecimal
 import java.time.LocalDateTime
 import kotlin.test.assertEquals
@@ -65,7 +65,7 @@ class FeePolicyPersistenceAdapterTest {
             Triple("2020-01-01T00:00:00Z", BigDecimal("0.0500"), BigDecimal("200")), // 5% + 200원
             Triple("2022-01-01T00:00:00Z", BigDecimal("0.0400"), BigDecimal("150")), // 4% + 150원
             Triple("2024-01-01T00:00:00Z", BigDecimal("0.0300"), BigDecimal("100")), // 3% + 100원
-            Triple("2024-06-01T00:00:00Z", BigDecimal("0.0250"), BigDecimal("50"))   // 2.5% + 50원
+            Triple("2024-06-01T00:00:00Z", BigDecimal("0.0250"), BigDecimal("50")) // 2.5% + 50원
         )
 
         // When & Then: 각 시점마다 올바른 정책이 선택됨
@@ -91,13 +91,13 @@ class FeePolicyPersistenceAdapterTest {
         testData.createFeePolicies(
             partner.id!!,
             Triple("2024-01-01T00:00:00Z", BigDecimal("0.0300"), BigDecimal("100")), // 3% + 100원
-            Triple("2024-06-01T00:00:00Z", BigDecimal("0.0250"), BigDecimal("50"))   // 2.5% + 50원
+            Triple("2024-06-01T00:00:00Z", BigDecimal("0.0250"), BigDecimal("50")) // 2.5% + 50원
         )
 
         // When & Then: 경계값 테스트
         assertPolicyAt(partner.id!!, LocalDateTime.of(2024, 5, 31, 23, 59, 59), BigDecimal("0.0300"), BigDecimal("100")) // 변경 직전
-        assertPolicyAt(partner.id!!, LocalDateTime.of(2024, 6, 1, 0, 0, 0), BigDecimal("0.0250"), BigDecimal("50"))      // 변경 시점
-        assertPolicyAt(partner.id!!, LocalDateTime.of(2024, 6, 1, 0, 0, 1), BigDecimal("0.0250"), BigDecimal("50"))      // 변경 직후
+        assertPolicyAt(partner.id!!, LocalDateTime.of(2024, 6, 1, 0, 0, 0), BigDecimal("0.0250"), BigDecimal("50")) // 변경 시점
+        assertPolicyAt(partner.id!!, LocalDateTime.of(2024, 6, 1, 0, 0, 1), BigDecimal("0.0250"), BigDecimal("50")) // 변경 직후
     }
 
     @Test
@@ -107,11 +107,10 @@ class FeePolicyPersistenceAdapterTest {
         testData.createFeePolicies(
             partner.id!!,
             Triple("2024-01-01T00:00:00Z", BigDecimal("0.0300"), BigDecimal("100")), // 현재 정책
-            Triple("2025-01-01T00:00:00Z", BigDecimal("0.0200"), BigDecimal.ZERO)    // 미래 정책
+            Triple("2025-01-01T00:00:00Z", BigDecimal("0.0200"), BigDecimal.ZERO) // 미래 정책
         )
 
         // When & Then: 현재 시점(2024-06-15)으로 조회 시 현재 정책만 반환됨
         assertPolicyAt(partner.id!!, LocalDateTime.of(2024, 6, 15, 0, 0, 0), BigDecimal("0.0300"), BigDecimal("100"))
     }
 }
-

@@ -61,7 +61,7 @@ class PaymentPersistenceAdapterTest @Autowired constructor(
         assertNotNull(result.nextCursorCreatedAt)
         assertNotNull(result.nextCursorId)
         assertNotNull(result.toNextCursor())
-        
+
         // nextCursor는 마지막 항목의 createdAt과 id와 일치해야 함
         val lastItem = result.items.last()
         assertEquals(lastItem.createdAt.toInstant(java.time.ZoneOffset.UTC), result.nextCursorCreatedAt)

@@ -4,10 +4,10 @@ import im.bigs.pg.application.partner.port.out.FeePolicyOutPort
 import im.bigs.pg.domain.partner.FeePolicy
 import im.bigs.pg.infra.persistence.partner.entity.FeePolicyEntity
 import im.bigs.pg.infra.persistence.partner.repository.FeePolicyJpaRepository
+import org.springframework.stereotype.Component
 import java.math.BigDecimal
 import java.time.LocalDateTime
 import java.time.ZoneOffset
-import org.springframework.stereotype.Component
 
 @Component
 class FeePolicyPersistenceAdapter(
