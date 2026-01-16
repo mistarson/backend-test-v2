@@ -10,6 +10,8 @@ dependencies {
     implementation(projects.modules.domain)
     implementation(projects.modules.application)
     implementation(libs.spring.boot.starter.jpa)
+    implementation(libs.flyway.core)
+    implementation(libs.flyway.mysql)
     runtimeOnly(libs.database.h2)
     runtimeOnly(libs.database.mariadb)
 

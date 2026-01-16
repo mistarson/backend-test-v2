@@ -4,6 +4,7 @@ mockk = "1.13.5"
 junit-platform = "1.10.2"
 fixture = "1.2.0"
 springdoc-openapi = "2.7.0"
+flyway = "10.10.0"
 
 [libraries]
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }
@@ -25,6 +26,8 @@ spring-mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 
 database-h2 = { module = "com.h2database:h2" }
 database-mariadb = { module = "org.mariadb.jdbc:mariadb-java-client" }
+flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }
+flyway-mysql = { module = "org.flywaydb:flyway-mysql", version.ref = "flyway" }
 
 test-junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform" }
 test-fixture = { module = "com.appmattus.fixture:fixture", version.ref = "fixture" }
