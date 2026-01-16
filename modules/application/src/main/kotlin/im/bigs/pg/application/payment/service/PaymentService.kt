@@ -1,5 +1,6 @@
 package im.bigs.pg.application.payment.service
 
+import im.bigs.pg.application.log.LoggingPort
 import im.bigs.pg.application.partner.port.out.FeePolicyOutPort
 import im.bigs.pg.application.partner.port.out.PartnerOutPort
 import im.bigs.pg.application.payment.port.`in`.PaymentCommand
@@ -13,8 +14,6 @@ import org.springframework.stereotype.Service
 
 /**
  * 결제 생성 유스케이스 구현체.
- * - 입력(REST 등) → 도메인/외부PG/영속성 포트를 순차적으로 호출하는 흐름을 담당합니다.
- * - 수수료 정책 조회 및 적용(계산)은 도메인 유틸리티를 통해 수행합니다.
  */
 @Service
 class PaymentService(
@@ -22,19 +21,19 @@ class PaymentService(
     private val feePolicyRepository: FeePolicyOutPort,
     private val paymentRepository: PaymentOutPort,
     private val pgApprovalService: PgApprovalService,
+    private val logger: LoggingPort,
 ) : PaymentUseCase {
-    /**
-     * 결제 승인/수수료 계산/저장을 순차적으로 수행합니다.
-     * - 제휴사별 수수료 정책(effective_from 기준 최신 정책)을 조회하여 적용합니다.
-     */
     override fun pay(command: PaymentCommand): Payment {
+        logger.debug("결제 처리 시작: partnerId={}, amount={}", command.partnerId, command.amount)
+
         val partner = partnerRepository.findById(command.partnerId)
             ?: throw IllegalArgumentException("Partner not found: ${command.partnerId}")
         require(partner.active) { "Partner is inactive: ${partner.id}" }
 
-        // 제휴사별 수수료 정책 조회 (현재 시점 기준)
         val feePolicy = feePolicyRepository.findEffectivePolicy(partner.id)
             ?: throw IllegalStateException("No effective fee policy for partner ${partner.id}")
+
+        logger.debug("수수료 정책 적용: partnerId={}, rate={}, fixedFee={}", partner.id, feePolicy.percentage, feePolicy.fixedFee)
 
         val approve = pgApprovalService.approve(
             PgApproveRequest(
@@ -62,9 +61,19 @@ class PaymentService(
             cardLast4 = command.cardLast4,
             approvalCode = approve.approvalCode,
             approvedAt = approve.approvedAt,
-            status = approve.status, // TestPG 응답의 status를 그대로 반영
+            status = approve.status,
         )
 
-        return paymentRepository.save(payment)
+        val saved = paymentRepository.save(payment)
+        logger.info(
+            "결제 처리 완료: paymentId={}, partnerId={}, amount={}, fee={}, netAmount={}, status={}",
+            saved.id,
+            saved.partnerId,
+            saved.amount,
+            saved.feeAmount,
+            saved.netAmount,
+            saved.status,
+        )
+        return saved
     }
 }

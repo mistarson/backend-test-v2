@@ -1,5 +1,6 @@
 package im.bigs.pg.application.pg.service
 
+import im.bigs.pg.application.log.LoggingPort
 import im.bigs.pg.application.payment.factory.ApplicationTestDataFactory
 import im.bigs.pg.application.pg.exception.PgApprovalException
 import im.bigs.pg.application.pg.exception.PgClientNotFoundException
@@ -23,7 +24,8 @@ import kotlin.test.assertNotNull
 class PgApprovalServiceTest {
     private val pgClientResolver = mockk<PgClientResolver>()
     private val pgClientRegistry = mockk<PgClientRegistry>()
-    private val service = PgApprovalService(pgClientResolver, pgClientRegistry)
+    private val logger = mockk<LoggingPort>(relaxed = true)
+    private val service = PgApprovalService(pgClientResolver, pgClientRegistry, logger)
 
     @Test
     @DisplayName("단일 PG 승인 성공 시 결과 반환")
