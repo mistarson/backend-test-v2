@@ -1,5 +1,6 @@
 package im.bigs.pg.application.payment.service
 
+import im.bigs.pg.application.log.LoggingPort
 import im.bigs.pg.application.partner.port.out.FeePolicyOutPort
 import im.bigs.pg.application.partner.port.out.PartnerOutPort
 import im.bigs.pg.application.payment.factory.ApplicationTestDataFactory
@@ -25,7 +26,8 @@ class PaymentServiceTest {
     private val feeRepo = mockk<FeePolicyOutPort>()
     private val paymentRepo = mockk<PaymentOutPort>()
     private val pgApprovalService = mockk<PgApprovalService>()
-    private val service = PaymentService(partnerRepo, feeRepo, paymentRepo, pgApprovalService)
+    private val logger = mockk<LoggingPort>(relaxed = true)
+    private val service = PaymentService(partnerRepo, feeRepo, paymentRepo, pgApprovalService, logger)
 
     @Test
     @DisplayName("정상 결제 승인 및 저장 - 모든 필드 검증")
