@@ -1,3 +1,127 @@
+## 간단 사용 가이드
+
+### 빠른 시작
+
+**필수 요구사항:**
+- JDK 21 이상
+- Docker & Docker Compose (Docker 실행 시)
+- Gradle Wrapper (프로젝트에 포함됨)
+
+### 실행 방법
+
+#### 방법 1: Docker Compose로 실행 (권장)
+
+```bash
+# 전체 서비스 실행 (애플리케이션 + MariaDB)
+# 처음 실행하거나 코드 변경 후 재빌드가 필요한 경우
+docker-compose up --build -d
+
+# 이미 빌드된 이미지가 있는 경우 (빠른 실행)
+docker-compose up -d
+
+# 로그 확인
+docker-compose logs -f app
+
+# 서비스 중지
+docker-compose down
+```
+
+애플리케이션은 `http://localhost:8080`에서 실행됩니다.  
+
+#### 방법 2: 로컬에서 Gradle로 실행
+
+**주의:** 로컬 실행 시 MariaDB가 필요합니다. 다음 중 하나를 선택하세요:
+
+**옵션 A: Docker Compose로 MariaDB만 실행하고, 애플리케이션은 로컬에서 실행**
+```bash
+# MariaDB 서비스만 실행
+docker-compose up -d mariadb
+
+# MariaDB가 준비될 때까지 대기 후, 애플리케이션을 로컬에서 실행
+./gradlew :modules:bootstrap:api-payment-gateway:bootRun
+```
+
+**옵션 B: 로컬에 MariaDB 설치 후 실행**
+```bash
+# 로컬 MariaDB 설치 후 실행 (설정: localhost:3306, DB: pgdb, User: pguser, Password: pgpassword)
+# 애플리케이션 실행
+./gradlew :modules:bootstrap:api-payment-gateway:bootRun
+```
+
+기본 포트: `8080`  
+데이터베이스 연결: `localhost:3306/pgdb` (User: `pguser`, Password: `pgpassword`)
+
+##개발 도구 접근 주소
+
+애플리케이션 실행 후 다음 주소로 접근할 수 있습니다:
+
+- **Swagger UI (API 문서)**: http://localhost:8080/swagger-ui.html
+- **OpenAPI JSON**: http://localhost:8080/v3/api-docs
+- **Actuator Health**: http://localhost:8080/actuator/health
+- **Actuator Metrics**: http://localhost:8080/actuator/metrics
+
+
+## 추가 PG사 연동 구현 내용
+
+PG 연동은 다음과 같은 흐름으로 동작합니다:
+
+**특정 PgClient 획득 흐름:**
+
+```
+1. PgApprovalService.approve() 호출
+   │
+   ├─→ 2. PgClientResolver.resolve(partnerId) - 해당 파트너에 맞는 PG사 목록 찾기
+   │      │
+   │      ├─→ 2-1. PartnerPgSupportOutPort.findPgCodesByPriority(partnerId) - 현재는 우선 순위순으로 PG사를 정렬하여 가져오기
+   │      │      │
+   │      │      └─→ 2-1-1. DB 조회: partner_pg_support + payment_gateway
+   │      │                (priority 기준 정렬)
+   │      │
+   │      └─→ 2-2. List<PgCode> 반환 (예: [TEST_PG, MOCK])
+   │
+   ├─→ 3. 각 PgCode 순회하며 PG 시도 - 한 PG사의 결제가 실패하더라도 다른 PG사와의 결제를 시도함으로써 결제의 지속성을 지킴
+   │      │
+   │      └─→ 4. PgClientRegistry.getClient(pgCode)
+   │             │
+   │             ├─→ 4-1. Map<PgCode, PgClient>에서 조회
+   │             │      (레지스트리는 생성 시점에 모든 @Component PgClient를 수집)
+   │             │
+   │             └─→ 4-2. PgClient 반환 (예: TestPgClient)
+   │
+   └─→ 5. PgClient.approve(request) 호출
+          │
+          └─→ 6. 실제 PG사 API 호출
+```
+
+**핵심 컴포넌트:**
+
+1. **PgClient 인터페이스로 추상화** (`modules/application/src/main/kotlin/im/bigs/pg/application/pg/port/out/PgClient.kt`)
+   - 각 PG사(TestPg, Mock 등)를 `PgClient` 인터페이스로 추상화
+   - `approve()`: 결제 승인 요청 처리
+   - `getPgCode()`: 지원하는 PG 코드 반환
+   - 새로운 PG사 추가 시 `PgClient` 인터페이스를 구현하는 클래스만 생성하면 자동으로 시스템에 통합됨
+
+2. **PgClientRegistry** (`modules/application/src/main/kotlin/im/bigs/pg/application/pg/registry/PgClientRegistry.kt`)
+   - Spring의 의존성 주입을 통해 모든 `PgClient` 구현체를 자동 수집
+   - `Map<PgCode, PgClient>` 형태로 관리하여 PG 코드를 통해 해당 PG사의 클라이언트를 빠르게 조회
+   - `getClient(pgCode: PgCode)` 메서드로 PG 코드에 해당하는 클라이언트를 얻을 수 있음
+   - `@Component`로 등록된 모든 `PgClient` 구현체가 자동으로 레지스트리에 등록됨
+
+3. **PgClientResolver 인터페이스로 전략 추상화** (`modules/application/src/main/kotlin/im/bigs/pg/application/pg/resolver/PgClientResolver.kt`)
+   - `PgClientResolver` 인터페이스를 통해 PG 선택 전략을 추상화
+   - 현재 구현: `PriorityBasedPgClientResolver` (`modules/application/src/main/kotlin/im/bigs/pg/application/pg/resolver/PriorityBasedPgClientResolver.kt`)
+     - 제휴사별로 지원하는 PG 목록을 데이터베이스에서 조회
+     - `payment_gateway.priority` 기준으로 우선순위 결정하여 반환
+   - **확장 가능성**: Resolver가 인터페이스로 추상화되어 있어, 추후 다른 전략으로 쉽게 교체 가능
+     - 우선순위 순으로 정렬하여 가져오는 `PriorityBasedPgClientResolver`
+     - 추후에 수수료가 가장 낮은 PG사를 우선적으로 가져오는 `FeeBasedPgClientResolver`를 개발하여 교체만 하면 됨
+
+4. **폴백 메커니즘**: `PgApprovalService` (`modules/application/src/main/kotlin/im/bigs/pg/application/pg/service/PgApprovalService.kt`)
+   - `PgClientResolver`로부터 받은 PG 목록을 순서대로 시도
+   - 첫 번째 PG 실패 시 자동으로 다음 PG로 폴백
+   - 모든 PG가 실패한 경우 `PgApprovalException` 발생
+---
+
 # 백엔드 사전 과제 – 결제 도메인 서버
 
 본 과제는 나노바나나 페이먼츠의 “결제 도메인 서버”를 주제로, 백엔드 개발자의 설계·구현·테스트 역량을 평가하기 위한 사전 과제입니다. 제공된 멀티모듈 + 헥사고널 아키텍처 기반 코드를 바탕으로 요구사항을 충족하는 기능을 완성해 주세요.
