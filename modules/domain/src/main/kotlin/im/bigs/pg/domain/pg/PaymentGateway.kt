@@ -18,4 +18,3 @@ data class PaymentGateway(
     val priority: Int = 0,
     val active: Boolean = true,
 )
-

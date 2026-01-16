@@ -10,4 +10,3 @@ class TestPgException(
     val statusCode: HttpStatus? = null, // HTTP 상태 코드 (테스트에서 검증용)
     cause: Throwable? = null,
 ) : RuntimeException(message, cause)
-

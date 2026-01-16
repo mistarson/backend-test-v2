@@ -32,4 +32,3 @@ class PaymentGatewayPersistenceAdapter(
             active = this.active
         )
 }
-

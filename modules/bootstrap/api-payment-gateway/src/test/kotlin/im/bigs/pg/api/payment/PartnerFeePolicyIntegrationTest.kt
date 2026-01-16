@@ -1,9 +1,9 @@
 package im.bigs.pg.api.payment
 
+import im.bigs.pg.api.BaseIntegrationTest
 import im.bigs.pg.api.factory.ApiTestDataFactory
 import im.bigs.pg.api.payment.dto.CreatePaymentRequest
 import im.bigs.pg.api.payment.dto.PaymentResponse
-import im.bigs.pg.api.BaseIntegrationTest
 import im.bigs.pg.application.pg.port.out.PgApproveResult
 import im.bigs.pg.domain.partner.Partner
 import im.bigs.pg.domain.payment.PaymentStatus
@@ -273,7 +273,7 @@ class PartnerFeePolicyIntegrationTest : BaseIntegrationTest() {
         assertEquals(BigDecimal("0.0250"), newPayment.appliedFeeRate, "새 정책(2.5%)이 적용되어야 합니다")
         assertEquals(BigDecimal("300"), newPayment.feeAmount, "수수료가 300원이어야 합니다 (10000 * 0.025 + 50)")
         assertEquals(11, paymentRepo.findAll().filter { it.partnerId == changePartner.id }.size, "총 11개 결제가 있어야 합니다")
-        
+
         // Then: 기존 10개 결제는 여전히 기존 정책 유지
         val existingPayments = paymentRepo.findAll().filter { it.partnerId == changePartner.id && it.id != newPayment.id }
         assertEquals(10, existingPayments.size, "기존 10개 결제가 유지되어야 합니다")
@@ -307,7 +307,7 @@ class PartnerFeePolicyIntegrationTest : BaseIntegrationTest() {
                 .multiply(rate)
                 .setScale(0, java.math.RoundingMode.HALF_UP) + fixedFee
             val netAmount = BigDecimal("10000") - feeAmount
-            
+
             testData.createPayment(
                 partnerId = selectedPartner.id,
                 amount = BigDecimal("10000"),
@@ -338,4 +338,3 @@ class PartnerFeePolicyIntegrationTest : BaseIntegrationTest() {
         }
     }
 }
-

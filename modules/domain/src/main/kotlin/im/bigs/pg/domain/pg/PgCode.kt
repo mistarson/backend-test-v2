@@ -10,4 +10,3 @@ enum class PgCode {
     NHN_KCP,
     KG_INICIS,
 }
-

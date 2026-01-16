@@ -1,9 +1,9 @@
 package im.bigs.pg.api.payment
 
-import im.bigs.pg.api.factory.ApiTestDataFactory
 import im.bigs.pg.api.BaseIntegrationTest
-import im.bigs.pg.domain.payment.PaymentStatus
+import im.bigs.pg.api.factory.ApiTestDataFactory
 import im.bigs.pg.domain.partner.Partner
+import im.bigs.pg.domain.payment.PaymentStatus
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -286,10 +286,7 @@ class PaymentQueryE2ETest : BaseIntegrationTest() {
         val ids = response.items.take(3).mapNotNull { it.id }
         // ID가 내림차순인지 확인 (최신이 먼저)
         for (i in 0 until ids.size - 1) {
-            assertTrue(ids[i]!! >= ids[i + 1]!!, "ID는 내림차순이어야 합니다")
+            assertTrue(ids[i] >= ids[i + 1], "ID는 내림차순이어야 합니다")
         }
     }
-
-
-
 }

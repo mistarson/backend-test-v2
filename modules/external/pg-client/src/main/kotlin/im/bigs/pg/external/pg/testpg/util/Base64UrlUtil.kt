@@ -17,4 +17,3 @@ object Base64UrlUtil {
         return decoder.decode(base64Url)
     }
 }
-

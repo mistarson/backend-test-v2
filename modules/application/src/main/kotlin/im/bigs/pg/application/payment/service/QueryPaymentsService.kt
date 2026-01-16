@@ -1,8 +1,9 @@
 package im.bigs.pg.application.payment.service
 
-import im.bigs.pg.application.payment.port.`in`.*
+import im.bigs.pg.application.payment.port.`in`.QueryFilter
+import im.bigs.pg.application.payment.port.`in`.QueryPaymentsUseCase
+import im.bigs.pg.application.payment.port.`in`.QueryResult
 import im.bigs.pg.application.payment.port.out.PaymentOutPort
-import im.bigs.pg.application.payment.port.out.PaymentPageWithSummary
 import im.bigs.pg.application.payment.util.CursorEncoder
 import org.springframework.stereotype.Service
 

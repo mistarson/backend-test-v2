@@ -12,4 +12,3 @@ object TestPgConstants {
     const val IV_SIZE = 12 // 96비트
     const val TAG_LENGTH = 128 // 128비트
 }
-

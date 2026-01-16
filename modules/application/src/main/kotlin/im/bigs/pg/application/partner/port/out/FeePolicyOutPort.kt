@@ -7,6 +7,6 @@ import java.time.ZoneOffset
 
 interface FeePolicyOutPort {
     fun findEffectivePolicy(partnerId: Long, at: LocalDateTime = LocalDateTime.now(ZoneOffset.UTC)): FeePolicy?
-    
+
     fun save(partnerId: Long, effectiveFrom: LocalDateTime, percentage: BigDecimal, fixedFee: BigDecimal?): FeePolicy
 }

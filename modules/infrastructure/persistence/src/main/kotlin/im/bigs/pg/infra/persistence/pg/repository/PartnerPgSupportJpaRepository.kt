@@ -1,8 +1,6 @@
 package im.bigs.pg.infra.persistence.pg.repository
 
-import im.bigs.pg.infra.persistence.partner.entity.PartnerEntity
 import im.bigs.pg.infra.persistence.pg.entity.PartnerPgSupportEntity
-import im.bigs.pg.infra.persistence.pg.entity.PaymentGatewayEntity
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
@@ -30,4 +28,3 @@ interface PartnerPgSupportJpaRepository : JpaRepository<PartnerPgSupportEntity, 
     )
     fun findPgCodesByPriority(@Param("partnerId") partnerId: Long): List<String>
 }
-

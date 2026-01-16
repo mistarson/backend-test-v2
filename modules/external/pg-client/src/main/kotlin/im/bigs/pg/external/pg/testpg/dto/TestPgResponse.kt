@@ -21,4 +21,3 @@ data class TestPgResponse(
         return LocalDateTime.parse(approvedAt, DateTimeFormatter.ISO_LOCAL_DATE_TIME)
     }
 }
-

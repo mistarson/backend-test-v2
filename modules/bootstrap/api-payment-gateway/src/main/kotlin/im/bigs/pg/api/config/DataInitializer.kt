@@ -7,5 +7,4 @@ import org.springframework.context.annotation.Configuration
  * - 운영 환경에서는 제거하거나 마이그레이션 도구로 대체합니다.
  */
 @Configuration
-class DataInitializer {
-}
+class DataInitializer

@@ -9,4 +9,3 @@ abstract class CustomException(
     message: String? = null,
     cause: Throwable? = null
 ) : RuntimeException(message ?: errorCode.message, cause)
-

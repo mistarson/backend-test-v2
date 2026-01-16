@@ -148,7 +148,7 @@ class ApiTestDataFactory(
         val appliedFeeRate = BigDecimal("0.0300")
         val feeAmount = amount.multiply(appliedFeeRate).setScale(0, java.math.RoundingMode.HALF_UP)
         val netAmount = amount - feeAmount
-        
+
         return createPayment(
             partnerId = partnerId,
             amount = amount,
